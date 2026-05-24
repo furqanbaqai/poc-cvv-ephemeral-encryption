@@ -1,0 +1,29 @@
+{
+  "name": "ephemeral-keys-javascript",
+  "version": "1.0.0",
+  "description": "Proof of concept for CVV encryption with ephemeral RSA-OAEP keys.",
+  "type": "module",
+  "private": true,
+  "main": "./src/app.js",
+  "exports": {
+    ".": "./src/app.js"
+  },
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "start": "node ./src/app.js",
+    "test": "node --test"
+  },
+  "keywords": [
+    "cvv",
+    "encryption",
+    "ephemeral-keys",
+    "rsa-oaep"
+  ],
+  "author": "Muhammad Furqan <baqai.furqan@gmail.com>",
+  "license": "Apache-2.0",
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -1,0 +1,6 @@
+## Message Model
+```json
+{
+    "cvv": 
+}
+```
