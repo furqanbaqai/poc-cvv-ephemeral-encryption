@@ -4,15 +4,15 @@
   "description": "Proof of concept for CVV encryption with ephemeral RSA-OAEP keys.",
   "type": "module",
   "private": true,
-  "main": "./src/app.js",
+  "main": "./src/step1_reveal.js",
   "exports": {
-    ".": "./src/app.js"
+    ".": "./src/step1_reveal.js"
   },
   "files": [
     "src"
   ],
   "scripts": {
-    "start": "node ./src/app.js",
+    "start_step1": "node ./src/step1_reveal.js",
     "test": "node --test"
   },
   "keywords": [
