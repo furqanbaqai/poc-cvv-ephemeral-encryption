@@ -1,0 +1,359 @@
+#!/usr/bin/env node
+'use strict';
+
+import crypto from "node:crypto";
+import { fileURLToPath } from "node:url";
+
+const VERSION = '1.0.0';
+const MAX_INPUT_BYTES = 8 * 1024;
+
+const PROTECTED_HEADER = Object.freeze({
+  alg: 'RSA-OAEP-256',
+  enc: 'A256GCM',
+  typ: 'JWE',
+  cty: 'json',
+  kid: 'ephemeral-key',
+  iat: 1775901000,
+});
+
+const PAYLOAD_IAT = 1775901000;
+const PAYLOAD_EXP = 1775901030;
+
+/**
+ * Encodes bytes using RFC 4648 base64url without padding.
+ *
+ * @param {Buffer|string} value - Bytes or UTF-8 string to encode.
+ * @returns {string} Base64url encoded value.
+ */
+function base64urlEncode(value) {
+  return Buffer.from(value)
+    .toString('base64')
+    .replace(/=/g, '')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_');
+}
+
+/**
+ * Parses and validates the single JSON command-line input.
+ *
+ * @param {string} jsonString - JSON string supplied as the only positional argument.
+ * @returns {object} Parsed JSON object.
+ * @throws {Error} When the input is missing, too large, malformed, or not an object.
+ */
+function validateInput(jsonString) {
+  if (typeof jsonString !== 'string' || jsonString.length === 0) {
+    throw new Error("Missing JSON input. Usage: node ./src/step2_encrypt.js '<json-input>'");
+  }
+
+  if (Buffer.byteLength(jsonString, 'utf8') > MAX_INPUT_BYTES) {
+    throw new Error('Input JSON exceeds the 8KB maximum size limit');
+  }
+
+  let parsed;
+  try {
+    parsed = JSON.parse(jsonString);
+  } catch {
+    throw new Error('Invalid JSON input');
+  }
+
+  if (parsed === null || Array.isArray(parsed) || typeof parsed !== 'object') {
+    throw new Error('Input JSON must be an object');
+  }
+
+  return parsed;
+}
+
+/**
+ * Converts a base64url encoded string to a Buffer.
+ *
+ * @param {string} value - Base64url encoded value.
+ * @returns {Buffer} Decoded bytes.
+ * @throws {Error} When the value is not valid base64url.
+ */
+function base64urlDecode(value) {
+  if (typeof value !== 'string' || !/^[A-Za-z0-9_-]+$/.test(value)) {
+    throw new Error('Invalid JWK format: modulus and exponent must be base64url strings');
+  }
+
+  const base64 = value.replace(/-/g, '+').replace(/_/g, '/');
+  const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=');
+  return Buffer.from(padded, 'base64');
+}
+
+/**
+ * Imports and validates an RSA public JWK for RSA-OAEP-256 encryption.
+ *
+ * @param {object} jwk - JWK public key object.
+ * @returns {crypto.KeyObject} Imported RSA public key.
+ * @throws {Error} When the JWK is missing, invalid, too small, or cannot be imported.
+ */
+function extractPublicKey(jwk) {
+  if (jwk === null || Array.isArray(jwk) || typeof jwk !== 'object') {
+    throw new Error('Missing or invalid ephemeralPublicKey: expected a JWK object');
+  }
+
+  if (jwk.kty !== 'RSA') {
+    throw new Error('Invalid JWK format: kty must be "RSA"');
+  }
+
+  if (jwk.alg !== 'RSA-OAEP-256') {
+    throw new Error('Invalid JWK format: alg must be "RSA-OAEP-256"');
+  }
+
+  if (typeof jwk.n !== 'string' || jwk.n.length === 0) {
+    throw new Error('Invalid JWK format: missing RSA modulus "n"');
+  }
+
+  if (typeof jwk.e !== 'string' || jwk.e.length === 0) {
+    throw new Error('Invalid JWK format: missing RSA exponent "e"');
+  }
+
+  const modulus = base64urlDecode(jwk.n);
+  const modulusBits = modulus.length * 8 - countLeadingZeroBits(modulus);
+  if (modulusBits < 2048) {
+    throw new Error('Invalid JWK format: RSA modulus must be at least 2048 bits');
+  }
+
+  let publicKey;
+  try {
+    publicKey = crypto.createPublicKey({ key: jwk, format: 'jwk' });
+  } catch {
+    throw new Error('Failed to import RSA public key from JWK');
+  }
+
+  if (publicKey.asymmetricKeyType !== 'rsa') {
+    throw new Error('Invalid JWK format: imported key is not RSA');
+  }
+
+  return publicKey;
+}
+
+/**
+ * Counts leading zero bits in a Buffer for accurate modulus size validation.
+ *
+ * @param {Buffer} buffer - Buffer to inspect.
+ * @returns {number} Number of leading zero bits.
+ */
+function countLeadingZeroBits(buffer) {
+  let bits = 0;
+
+  for (const byte of buffer) {
+    if (byte === 0) {
+      bits += 8;
+      continue;
+    }
+
+    for (let mask = 0x80; mask > 0; mask >>= 1) {
+      if ((byte & mask) !== 0) {
+        return bits;
+      }
+      bits += 1;
+    }
+  }
+
+  return bits;
+}
+
+/**
+ * Generates a random 256-bit content encryption key.
+ *
+ * @returns {Buffer} Random 32-byte CEK.
+ */
+function generateCek() {
+  return crypto.randomBytes(32);
+}
+
+/**
+ * Generates a random 96-bit IV for AES-GCM.
+ *
+ * @returns {Buffer} Random 12-byte IV.
+ */
+function generateIv() {
+  return crypto.randomBytes(12);
+}
+
+/**
+ * Builds the fixed payment-card payload using the normalized PAN.
+ *
+ * @param {string} cardRef - Card reference string from input.
+ * @returns {object} JWE plaintext payload object.
+ * @throws {Error} When cardRef is missing, empty, or payload times are invalid.
+ */
+function createPayload(cardRef) {
+  if (typeof cardRef !== 'string' || cardRef.trim().length === 0) {
+    throw new Error('Missing or invalid cardRef: expected a non-empty string');
+  }
+
+  const normalizedCardRef = cardRef.replace(/\s+/g, '');
+  if (normalizedCardRef.length === 0) {
+    throw new Error('Missing or invalid cardRef: expected a non-empty string');
+  }
+
+  const payload = {
+    cardRef: normalizedCardRef,
+    pan: normalizedCardRef,
+    expiryMonth: '12',
+    expiryYear: '29',
+    cvv: '123',
+    iat: PAYLOAD_IAT,
+    exp: PAYLOAD_EXP,
+    jti: 'reveal-8f3a1c',
+  };
+
+  if (payload.exp <= payload.iat) {
+    throw new Error('Invalid payload timestamps: exp must be greater than iat');
+  }
+
+  return payload;
+}
+
+/**
+ * Wraps the CEK with RSA-OAEP using SHA-256 as required by RSA-OAEP-256.
+ *
+ * @param {Buffer} cek - Content encryption key.
+ * @param {crypto.KeyObject} publicKey - RSA public key.
+ * @returns {Buffer} RSA-encrypted CEK.
+ * @throws {Error} When key wrapping fails.
+ */
+function encryptKey(cek, publicKey) {
+  try {
+    return crypto.publicEncrypt(
+      {
+        key: publicKey,
+        oaepHash: 'sha256',
+        padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
+      },
+      cek,
+    );
+  } catch {
+    throw new Error('Encryption failure: failed to wrap CEK with RSA-OAEP-256');
+  }
+}
+
+/**
+ * Encrypts the payload with AES-256-GCM.
+ *
+ * @param {object} payload - Payload object to encrypt.
+ * @param {Buffer} cek - 256-bit content encryption key.
+ * @param {Buffer} iv - 96-bit AES-GCM initialization vector.
+ * @returns {{ciphertext: Buffer, tag: Buffer}} Ciphertext and 128-bit authentication tag.
+ * @throws {Error} When content encryption fails.
+ */
+function encryptContent(payload, cek, iv) {
+  try {
+    // AES-256-GCM provides authenticated encryption; the empty AAD matches this prompt's compact JWE requirement.
+    const cipher = crypto.createCipheriv('aes-256-gcm', cek, iv);
+    cipher.setAAD(Buffer.alloc(0));
+
+    const plaintext = Buffer.from(JSON.stringify(payload), 'utf8');
+    const ciphertext = Buffer.concat([cipher.update(plaintext), cipher.final()]);
+    const tag = cipher.getAuthTag();
+
+    return { ciphertext, tag };
+  } catch {
+    throw new Error('Encryption failure: failed to encrypt payload with AES-256-GCM');
+  }
+}
+
+/**
+ * Builds a compact JWE string from its five encoded parts.
+ *
+ * @param {object} protectedHeader - Protected JWE header.
+ * @param {Buffer} encryptedKey - RSA-encrypted CEK.
+ * @param {Buffer} iv - AES-GCM IV.
+ * @param {Buffer} ciphertext - AES-GCM ciphertext.
+ * @param {Buffer} tag - AES-GCM authentication tag.
+ * @returns {string} JWE compact serialization.
+ */
+function buildJwe(protectedHeader, encryptedKey, iv, ciphertext, tag) {
+  return [
+    base64urlEncode(JSON.stringify(protectedHeader)),
+    base64urlEncode(encryptedKey),
+    base64urlEncode(iv),
+    base64urlEncode(ciphertext),
+    base64urlEncode(tag),
+  ].join('.');
+}
+
+/**
+ * Clears a sensitive Buffer in place.
+ *
+ * @param {Buffer|undefined} buffer - Sensitive buffer to clear.
+ * @returns {void}
+ */
+function secureClear(buffer) {
+  if (Buffer.isBuffer(buffer)) {
+    buffer.fill(0);
+  }
+}
+
+/**
+ * Prints CLI help text.
+ *
+ * @returns {void}
+ */
+function printHelp() {
+  process.stdout.write("Usage: node ./src/step2_encrypt.js '<json-input>'\n");
+}
+
+/**
+ * Runs the command-line application.
+ *
+ * @returns {void}
+ */
+function main() {
+  let cek;
+
+  try {
+    const args = process.argv.slice(2);
+
+    if (args.length === 1 && (args[0] === '--help' || args[0] === '-h')) {
+      printHelp();
+      return;
+    }
+
+    if (args.length === 1 && (args[0] === '--version' || args[0] === '-v')) {
+      process.stdout.write(`${VERSION}\n`);
+      return;
+    }
+
+    if (args.length !== 1) {
+      throw new Error("Expected exactly one positional JSON argument. Usage: node ./src/step2_encrypt.js '<json-input>'");
+    }
+
+    const input = validateInput(args[0]);
+    const publicKey = extractPublicKey(input.ephemeralPublicKey);
+    const payload = createPayload(input.cardRef);
+
+    cek = generateCek();
+    const iv = generateIv();
+    const encryptedKey = encryptKey(cek, publicKey);
+    const { ciphertext, tag } = encryptContent(payload, cek, iv);
+    const jwe = buildJwe(PROTECTED_HEADER, encryptedKey, iv, ciphertext, tag);
+
+    process.stdout.write(`${jwe}\n`);
+  } catch (error) {
+    process.stderr.write(`${error.message || 'Unexpected encryption failure'}\n`);
+    process.exitCode = 1;
+  } finally {
+    secureClear(cek);
+  }
+}
+
+export {
+  PROTECTED_HEADER,
+  base64urlEncode,
+  buildJwe,
+  createPayload,
+  encryptContent,
+  encryptKey,
+  extractPublicKey,
+  generateCek,
+  generateIv,
+  secureClear,
+  validateInput,
+};
+
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  main();
+}

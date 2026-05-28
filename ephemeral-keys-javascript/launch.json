@@ -1,0 +1,20 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "Launch Program",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "program": "${workspaceFolder}\\src\\step2_encrypt.js",
+            "parameters": [
+                "{\"requestId\":\"ed2e74ce3c26453a97b14d8bebac8ded\",\"cardRef\":\"4012 8888 8888 1881\",\"channel\":\"mobile\",\"ephemeralPublicKey\":{\"kty\":\"RSA\",\"use\":\"enc\",\"alg\":\"RSA-OAEP-256\",\"n\":\"51FePt844iEDXaYRW84puEUJU7m9cBR5qApPYQEizBthvr7wdBTz4U3xEYyjLSstwCBoXLC5DSPJtK7ZppO6C2fNMzrx7CP3bWJfQmrXOnXiCVOEj3Ib984-yDmdDDs6dp9ZajKtYNVyJSxs6nQwJVbOpRf8tQCrNsr9jb90lCunwW6nXYpSP4NbhfBrN2GgMstEwmF-XQOjNoTBb2yegC8yN9aahpk13kkoKpvYuKAb9lqGX0--d8IfY_G25QhE8Nkop2JIZrRj_Gz2ztVm1NlFo_f-qyVNuAiy94T9bnRysXRGrmHBYULL6_z6IB2xcXTkGdUzvADkU68d_Hmtnw\",\"e\":\"AQAB\"}}"
+            ]
+        }
+    ]
+}

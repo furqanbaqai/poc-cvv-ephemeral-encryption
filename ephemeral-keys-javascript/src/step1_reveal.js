@@ -53,7 +53,8 @@ export async function generateRevealRequest(
 
 export async function displayRevealRequest(cardRef, options) {
   const request = await generateRevealRequest(cardRef, options);
-  console.log(JSON.stringify(request, null, 2));
+  // console.log(JSON.stringify(request, null, 2));
+  console.log(JSON.stringify(request));
   return request;
 }
 

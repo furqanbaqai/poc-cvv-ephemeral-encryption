@@ -13,6 +13,8 @@
   ],
   "scripts": {
     "start_step1": "node ./src/step1_reveal.js",
+    "start_step2": "node ./src/step2_encrypt.js",
+    "test_step2": "node ./test/step2_encrypt.test.js",
     "test": "node --test"
   },
   "keywords": [
