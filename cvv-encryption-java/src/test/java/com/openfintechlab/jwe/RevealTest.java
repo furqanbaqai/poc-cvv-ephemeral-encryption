@@ -61,6 +61,41 @@ class RevealTest {
     }
 
     @Test
+    void buildRevealRequestUsesProvidedCardRefAndChannelWithoutPrivateKey() throws Exception {
+        RevealRequest request = Reveal.buildRevealRequest(false, "card_12345", "web");
+        String json = JsonUtil.toMinifiedJson(request);
+        JsonNode root = OBJECT_MAPPER.readTree(json);
+
+        assertRequestBasics(request, "card_12345", "web");
+        assertEquals("card_12345", root.get("cardRef").asText());
+        assertEquals("web", root.get("channel").asText());
+        assertEquals("RSA", root.get("ephemeralPublicKey").get("kty").asText());
+        assertEquals("enc", root.get("ephemeralPublicKey").get("use").asText());
+        assertEquals("RSA-OAEP-256", root.get("ephemeralPublicKey").get("alg").asText());
+        assertTrue(root.get("ephemeralPublicKey").get("n").asText().matches("[A-Za-z0-9_-]+"));
+        assertEquals("AQAB", root.get("ephemeralPublicKey").get("e").asText());
+        assertFalse(root.get("ephemeralPublicKey").has("privateKey"));
+    }
+
+    @Test
+    void buildRevealRequestUsesProvidedCardRefAndChannelWithPrivateKeyInDebugMode() throws Exception {
+        RevealRequest request = Reveal.buildRevealRequest(true, "card_67890", "atm");
+        String privateKey = request.getEphemeralPublicKey().getPrivateKey();
+        String json = JsonUtil.toMinifiedJson(request);
+        JsonNode root = OBJECT_MAPPER.readTree(json);
+
+        assertRequestBasics(request, "card_67890", "atm");
+        assertEquals("card_67890", root.get("cardRef").asText());
+        assertEquals("atm", root.get("channel").asText());
+        assertNotNull(privateKey);
+        assertTrue(privateKey.startsWith("-----BEGIN PRIVATE KEY-----\n"));
+        assertTrue(privateKey.endsWith("\n-----END PRIVATE KEY-----"));
+        assertTrue(root.get("ephemeralPublicKey").has("privateKey"));
+        assertDoesNotThrow(() -> KeyFactory.getInstance("RSA")
+                .generatePrivate(new PKCS8EncodedKeySpec(decodePem(privateKey))));
+    }
+
+    @Test
     void mainRevealCommandPrintsMinifiedJsonToStdout() throws Exception {
         CliResult result = runMain("reveal");
         JsonNode root = OBJECT_MAPPER.readTree(result.stdout().trim());
@@ -97,10 +132,14 @@ class RevealTest {
     }
 
     private static void assertRequestBasics(RevealRequest request) {
+        assertRequestBasics(request, "4012 8888 8888 1881", "mobile");
+    }
+
+    private static void assertRequestBasics(RevealRequest request, String expectedCardRef, String expectedChannel) {
         assertNotNull(request);
         assertTrue(request.getRequestId().matches("[0-9a-f]{32}"));
-        assertEquals("4012 8888 8888 1881", request.getCardRef());
-        assertEquals("mobile", request.getChannel());
+        assertEquals(expectedCardRef, request.getCardRef());
+        assertEquals(expectedChannel, request.getChannel());
     }
 
     private static byte[] decodePem(String pem) {

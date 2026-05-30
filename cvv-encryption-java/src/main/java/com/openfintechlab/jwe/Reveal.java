@@ -18,13 +18,68 @@ public class Reveal {
     private static final char[] HEX = "0123456789abcdef".toCharArray();
 
     /**
-     * Builds a reveal request with an ephemeral RSA public key.
+     * Builds a reveal request with an ephemeral RSA public key. The procedure will take
+     * defaulted card number and channel as "4012 8888 8888 1881" and "mobile" respectively.
+     * 
+     * <p>The returned model serializes to JSON with this shape:</p>
      *
+     * <pre>{@code
+     * {
+     *   "requestId": "string",
+     *   "cardRef": "string",
+     *   "channel": "string",
+     *   "ephemeralPublicKey": {
+     *     "kty": "string",
+     *     "use": "string",
+     *     "alg": "string",
+     *     "n": "string",
+     *     "e": "string",
+     *     "privateKey": "string"
+     *   }
+     * }
+     * }</pre>
+     *
+     * <p>The {@code privateKey} field is populated only when {@code debug} is true.</p>
+     *  
+     * **NOTE:** The procedure is intended to use for simulation purposes only and should not be used in production environments.
      * @param debug when true, includes PKCS#8 PEM private key in the output
      * @return reveal request model
      * @throws Exception when key generation or request serialization preparation fails
      */
     public static RevealRequest buildRevealRequest(boolean debug) throws Exception {
+        return buildRevealRequest(debug, CARD_REF, CHANNEL);
+    }
+
+    /**
+     * Builds a reveal request with an ephemeral RSA public key.
+     *
+     * <p>The returned model serializes to JSON with this shape:</p>
+     *
+     * <pre>{@code
+     * {
+     *   "requestId": "string",
+     *   "cardRef": "string",
+     *   "channel": "string",
+     *   "ephemeralPublicKey": {
+     *     "kty": "string",
+     *     "use": "string",
+     *     "alg": "string",
+     *     "n": "string",
+     *     "e": "string",
+     *     "privateKey": "string"
+     *   }
+     * }
+     * }</pre>
+     *
+     * <p>The {@code privateKey} field is populated only when {@code debug} is true.</p>
+     *
+     * @param debug when true, includes PKCS#8 PEM private key in the output
+     * @param cardRef card reference to include in the request
+     * @param channel request channel to include in the request
+     * @return reveal request model
+     * @throws Exception when key generation fails
+     */
+    public static RevealRequest buildRevealRequest(boolean debug, String cardRef, String channel) throws Exception {
         KeyPair keyPair = KeyGeneratorUtil.generateEphemeralRsaKeyPair();
         RSAPublicKey publicKey = (RSAPublicKey) keyPair.getPublic();
         EphemeralPublicKey ephemeralPublicKey = KeyGeneratorUtil.toEphemeralPublicKey(publicKey);
@@ -36,8 +91,8 @@ public class Reveal {
 
         return RevealRequest.builder()
                 .requestId(generateRequestId())
-                .cardRef(CARD_REF)
-                .channel(CHANNEL)
+                .cardRef(cardRef)
+                .channel(channel)
                 .ephemeralPublicKey(ephemeralPublicKey)
                 .build();
     }

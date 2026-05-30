@@ -1,8 +1,0 @@
-com\openfintechlab\jwe\model\RevealRequest$Builder.class
-com\openfintechlab\jwe\Reveal.class
-com\openfintechlab\jwe\util\JsonUtil.class
-com\sib\cvv\Main.class
-com\openfintechlab\jwe\util\KeyGeneratorUtil.class
-com\openfintechlab\jwe\model\EphemeralPublicKey$Builder.class
-com\openfintechlab\jwe\model\RevealRequest.class
-com\openfintechlab\jwe\model\EphemeralPublicKey.class
