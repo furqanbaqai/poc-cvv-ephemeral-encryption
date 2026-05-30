@@ -33,7 +33,7 @@ cvv-encryption-java/
       Main.java
 ```
 
-`com.sib.cvv.Main` is the original placeholder class. The packaged CLI entry point is `com.openfintechlab.jwe.Reveal`.
+`com.sib.cvv.Main` is the packaged CLI entry point and owns all console interaction. `com.openfintechlab.jwe.Reveal` contains reveal request generation logic.
 
 ## Reveal Command
 
@@ -119,10 +119,10 @@ The reveal tests verify:
 After compiling, run without packaging:
 
 ```sh
-java -cp target/classes com.openfintechlab.jwe.Reveal reveal
+java -cp target/classes com.sib.cvv.Main reveal
 ```
 
-When running from classes, Jackson must also be on the classpath. Prefer the packaged JAR for normal usage.
+When running from classes, use `com.sib.cvv.Main`. The reveal CLI uses only JDK classes at runtime, so `target/classes` is sufficient for this command.
 
 ## CLI Validation
 

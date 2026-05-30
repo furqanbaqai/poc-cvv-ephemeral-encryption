@@ -1,11 +1,8 @@
 package com.openfintechlab.jwe.model;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-
 /**
  * JWK-style RSA public key fields used by the reveal request.
  */
-@JsonInclude(JsonInclude.Include.NON_NULL)
 public class EphemeralPublicKey {
     private String kty;
     private String use;

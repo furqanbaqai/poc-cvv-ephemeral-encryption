@@ -1,7 +1,6 @@
 package com.openfintechlab.jwe.util;
 
 import com.openfintechlab.jwe.model.EphemeralPublicKey;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import java.math.BigInteger;
 import java.security.GeneralSecurityException;
 import java.security.KeyPair;
@@ -48,11 +47,7 @@ public final class KeyGeneratorUtil {
      * @return public-key model containing JWK fields
      */
     public static String toJwkPublicKey(RSAPublicKey publicKey) {
-        try {
-            return JsonUtil.toMinifiedJson(toEphemeralPublicKey(publicKey));
-        } catch (JsonProcessingException exception) {
-            throw new IllegalStateException("Failed to serialize RSA public JWK", exception);
-        }
+        return JsonUtil.toMinifiedJson(toEphemeralPublicKey(publicKey));
     }
 
     /**

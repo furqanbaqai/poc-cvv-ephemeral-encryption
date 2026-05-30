@@ -10,6 +10,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openfintechlab.jwe.model.RevealRequest;
 import com.openfintechlab.jwe.util.JsonUtil;
+import com.sib.cvv.Main;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
@@ -119,7 +120,7 @@ class RevealTest {
         try {
             System.setOut(new PrintStream(stdout, true, StandardCharsets.UTF_8));
             System.setErr(new PrintStream(stderr, true, StandardCharsets.UTF_8));
-            Reveal.main(args);
+            Main.main(args);
             return new CliResult(stdout.toString(StandardCharsets.UTF_8), stderr.toString(StandardCharsets.UTF_8));
         } finally {
             System.setOut(originalOut);
