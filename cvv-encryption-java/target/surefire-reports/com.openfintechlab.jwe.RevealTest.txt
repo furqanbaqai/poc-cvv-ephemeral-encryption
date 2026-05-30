@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: com.openfintechlab.jwe.RevealTest
+-------------------------------------------------------------------------------
+Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.791 s -- in com.openfintechlab.jwe.RevealTest
