@@ -106,6 +106,16 @@ public final class KeyGeneratorUtil {
     }
 
     /**
+     * Decodes base64url text without requiring padding.
+     *
+     * @param value base64url text
+     * @return decoded bytes
+     */
+    public static byte[] base64urlDecode(String value) {
+        return Base64.getUrlDecoder().decode(value);
+    }
+
+    /**
      * Creates a secure random instance for request IDs and key generation.
      *
      * @return secure random instance

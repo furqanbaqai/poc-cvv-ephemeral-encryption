@@ -53,11 +53,24 @@ public final class JsonUtil {
         return json.append("}").toString();
     }
 
-    private static String jsonField(String name, String value) {
+    /**
+     * Builds a JSON string field.
+     *
+     * @param name field name
+     * @param value field value
+     * @return minified JSON field text
+     */
+    public static String jsonField(String name, String value) {
         return "\"" + escapeJson(name) + "\":\"" + escapeJson(value) + "\"";
     }
 
-    private static String escapeJson(String value) {
+    /**
+     * Escapes a string for use as a JSON string value.
+     *
+     * @param value raw string
+     * @return JSON-escaped string without surrounding quotes
+     */
+    public static String escapeJson(String value) {
         StringBuilder escaped = new StringBuilder(value.length() + 16);
 
         for (int index = 0; index < value.length(); index++) {

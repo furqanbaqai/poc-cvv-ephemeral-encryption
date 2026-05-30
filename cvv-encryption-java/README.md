@@ -65,6 +65,34 @@ $ java -jar target/cvv-encryption-java.jar reveal debug
 
 Warning: debug mode exposes the private key. Use it only in development or testing environments.
 
+## JWE Encrypt Command
+
+Encrypts the card payload using the RSA public key from a reveal request JSON and prints a compact JWE token.
+
+### Usage
+
+```bash
+java -jar target/cvv-encryption-java.jar jwe-encrypt '<JSON-PAYLOAD>'
+```
+
+The JSON payload must contain `cardRef` and `ephemeralPublicKey` with public JWK fields:
+
+```json
+{"requestId":"facbd5d0f1feb1f067c81df1644404c8","cardRef":"4012 8888 8888 1881","channel":"mobile","ephemeralPublicKey":{"kty":"RSA","use":"enc","alg":"RSA-OAEP-256","n":"...","e":"AQAB"}}
+```
+
+The encrypted JWE uses this protected header:
+
+```json
+{"alg":"RSA-OAEP-256","enc":"A256GCM","typ":"JWE","cty":"json","kid":"ephemeral-key","iat":1775901000}
+```
+
+The encrypted payload contains:
+
+```json
+{"cardRef":"<cardRef>","pan":"<cardRef>","expiryMonth":"12","expiryYear":"29","cvv":"123","iat":1775901000,"exp":1775901030,"jti":"reveal-8f3a1c"}
+```
+
 ## Output Fields
 
 | Field | Description |
@@ -113,6 +141,7 @@ The reveal tests verify:
 - debug mode includes a valid PKCS#8 PEM private key;
 - CLI `reveal` and `reveal debug` print minified JSON to stdout;
 - request IDs are 32-character lowercase hexadecimal strings.
+- CLI `jwe-encrypt` prints compact JWE that decrypts to the expected header and payload.
 
 ## Run From Classes
 
