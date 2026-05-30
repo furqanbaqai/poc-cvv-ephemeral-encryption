@@ -1,0 +1,15 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "node-terminal",
+            "request": "launch",
+            "name": "Debug Current JavaScript File",
+            "cwd": "${fileDirname}",
+            "command": "if ('${fileBasename}' -eq 'step2_encrypt.js') { node '${file}' '{\"requestId\":\"f53c14df182f4688a74e99a1e055dc99\",\"cardRef\":\"4012 8888 8888 1881\",\"channel\":\"mobile\",\"ephemeralPublicKey\":{\"kty\":\"RSA\",\"use\":\"enc\",\"alg\":\"RSA-OAEP-256\",\"n\":\"sIa4uFhfs8rj7kUbU9zk3VCiWUuOsbKI-lWpIX3Z4dTn59CXMDSJG-GebjC62EaTyC5yo5-Ve6e8n6WZ4iXR-Dn1REUq5ivCUENF5S8KaJo8eJdLhAeGhFGK7qqTExvOH6Xggux5cwh2IXq0JNwM0Tn4k5G0ZQ0W-1EYNbFDYWZ9orxWQIC5y4K_7dfk4G3cwnOanjkHuOIeOFAmwgylcDIROJax4plWhjWxfh7C-7kikOmZ8G9cbpKjoll9upsJxcdrQtlZvRbo7ZeZIG6gI9dIeKJUJJT0B75uk0_MGr3njDv4msikgo1qInglfrE9k9dh-AfXpgThXgT0b0GJDw\",\"e\":\"AQAB\"}}' } else { node '${file}' }",
+            "skipFiles": [
+                "<node_internals>/**"
+            ]
+        }
+    ]
+}
