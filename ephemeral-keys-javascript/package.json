@@ -14,7 +14,9 @@
   "scripts": {
     "start_step1": "node ./src/step1_reveal.js",
     "start_step2": "node ./src/step2_encrypt.js",
+    "start_step3": "node ./src/step3_decryptjwe.js",
     "test_step2": "node ./test/step2_encrypt.test.js",
+    "test_step3": "node ./test/step3_decryptjwe.test.js",
     "test": "node --test"
   },
   "keywords": [

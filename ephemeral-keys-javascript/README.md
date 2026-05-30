@@ -6,6 +6,7 @@ This project has two command-line steps:
 
 1. Generate an ephemeral RSA-OAEP public key reveal request.
 2. Encrypt card data into a compact JWE using the reveal request public key.
+3. Decrypt a compact JWE using the matching RSA private key.
 
 ## Prerequisites
 
@@ -20,9 +21,11 @@ ephemeral-keys-javascript/
   src/
     step1_reveal.js
     step2_encrypt.js
+    step3_decryptjwe.js
   test/
     step1_reveal.test.js
     step2_encrypt.test.js
+    step3_decryptjwe.test.js
 ```
 
 ## Start Scripts
@@ -35,7 +38,7 @@ Generate a reveal request JSON:
 npm run start_step1
 ```
 
-Generate a reveal request JSON that also includes private-key debug material:
+Generate a reveal request JSON that also includes the full PEM private key for debugging:
 
 ```sh
 npm run start_step1 -- debug
@@ -45,6 +48,12 @@ Encrypt a reveal request JSON into compact JWE:
 
 ```sh
 npm run start_step2 -- '{"requestId":"...","cardRef":"4012 8888 8888 1881","channel":"mobile","ephemeralPublicKey":{"kty":"RSA","use":"enc","alg":"RSA-OAEP-256","n":"...","e":"AQAB"}}'
+```
+
+Decrypt a compact JWE with an RSA private key in PEM or JWK format:
+
+```sh
+npm run start_step3 -- '<jwe-token>' '<private-key>'
 ```
 
 PowerShell example that pipes Step 1 output into Step 2:
@@ -81,6 +90,12 @@ Run only the Step 2 encryption CLI test:
 npm run test_step2
 ```
 
+Run only the Step 3 decryption CLI test:
+
+```sh
+npm run test_step3
+```
+
 The Step 2 test uses this reveal request fixture:
 
 ```json
@@ -101,5 +116,6 @@ The npm scripts are wrappers around these direct commands:
 node ./src/step1_reveal.js
 node ./src/step2_encrypt.js '<json-input>'
 '<json-input>' | node ./src/step2_encrypt.js
+node ./src/step3_decryptjwe.js '<jwe-token>' '<private-key>'
 ```
 

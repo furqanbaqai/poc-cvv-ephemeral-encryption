@@ -11,6 +11,17 @@ const RSA_OAEP_ALGORITHM = {
   hash: "SHA-256",
 };
 
+function formatPemPrivateKey(pkcs8PrivateKey) {
+  const base64Key = Buffer.from(pkcs8PrivateKey).toString("base64");
+  const lines = base64Key.match(/.{1,64}/g) ?? [];
+
+  return [
+    "-----BEGIN PRIVATE KEY-----",
+    ...lines,
+    "-----END PRIVATE KEY-----",
+  ].join("\n");
+}
+
 export async function generateEphemeralKeyPair() {
   const { publicKey, privateKey } = await subtle.generateKey(
     RSA_OAEP_ALGORITHM,
@@ -28,7 +39,7 @@ export async function generateRevealRequest(
   const { publicKey, privateKey } = await generateEphemeralKeyPair();
   const exportedPublicKey = await subtle.exportKey("jwk", publicKey);
   const exportedPrivateKey = debug
-    ? await subtle.exportKey("jwk", privateKey)
+    ? await subtle.exportKey("pkcs8", privateKey)
     : undefined;
 
   const request = {
@@ -45,7 +56,7 @@ export async function generateRevealRequest(
   };
 
   if (debug) {
-    request.ephemeralPublicKey.d = exportedPrivateKey.d;
+    request.ephemeralPublicKey.privateKey = formatPemPrivateKey(exportedPrivateKey);
   }
 
   return request;
@@ -57,6 +68,8 @@ export async function displayRevealRequest(cardRef, options) {
   console.log(JSON.stringify(request));
   return request;
 }
+
+export { formatPemPrivateKey };
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const debug = process.argv.slice(2).includes("debug");
