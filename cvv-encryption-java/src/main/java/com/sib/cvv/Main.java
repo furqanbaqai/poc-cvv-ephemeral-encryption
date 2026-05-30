@@ -1,6 +1,7 @@
 package com.sib.cvv;
 
 import com.openfintechlab.jwe.JWEEncrypt;
+import com.openfintechlab.jwe.JWEDecrypt;
 import com.openfintechlab.jwe.Reveal;
 import com.openfintechlab.jwe.model.RevealRequest;
 import com.openfintechlab.jwe.util.JsonUtil;
@@ -10,6 +11,7 @@ import java.util.Map;
 public class Main {
     private static final String COMMAND_REVEAL = "reveal";
     private static final String COMMAND_JWE_ENCRYPT = "jwe-encrypt";
+    private static final String COMMAND_JWE_DECRYPT = "jwe-decrypt";
     private static final String OPTION_DEBUG = "debug";
     private static final String EXPIRY_MONTH = "12";
     private static final String EXPIRY_YEAR = "29";
@@ -47,6 +49,12 @@ public class Main {
                 return;
             }
 
+            if (isJweDecryptCommand(args)) {
+                JWEDecrypt decryptor = new JWEDecrypt(args[1], parsePrivateKeyInput(args[2]));
+                System.out.println(decryptor.decrypt());
+                return;
+            }
+
             if (!isValidArguments(args)) {
                 printUsage();
                 System.exit(1);
@@ -58,7 +66,7 @@ public class Main {
     }
 
     private static boolean isValidArguments(String[] args) {
-        return isRevealCommand(args) || isJweEncryptCommand(args);
+        return isRevealCommand(args) || isJweEncryptCommand(args) || isJweDecryptCommand(args);
     }
 
     private static boolean isRevealCommand(String[] args) {
@@ -70,6 +78,13 @@ public class Main {
         return args.length == 2 && COMMAND_JWE_ENCRYPT.equals(args[0]) && !args[1].isBlank();
     }
 
+    private static boolean isJweDecryptCommand(String[] args) {
+        return args.length == 3
+                && COMMAND_JWE_DECRYPT.equals(args[0])
+                && !args[1].isBlank()
+                && !args[2].isBlank();
+    }
+
     private static void printUsage() {
         System.err.println("Usage: java -jar cvv-encryption-java.jar <COMMAND> [OPTIONS]");
         System.err.println();
@@ -78,11 +93,14 @@ public class Main {
         System.err.println("                    Include 'debug' to emit private key PEM");
         System.err.println("  jwe-encrypt <JSON-PAYLOAD>");
         System.err.println("                    Encrypt card data using reveal request public key");
+        System.err.println("  jwe-decrypt <JWE-MESSAGE> <PRIVATE-KEY>");
+        System.err.println("                    Decrypt JWE card data using the reveal request private key");
         System.err.println();
         System.err.println("Examples:");
         System.err.println("  java -jar cvv-encryption-java.jar reveal");
         System.err.println("  java -jar cvv-encryption-java.jar reveal debug");
         System.err.println("  java -jar cvv-encryption-java.jar jwe-encrypt '{\"requestId\":\"...\",\"cardRef\":\"...\",\"channel\":\"mobile\",\"ephemeralPublicKey\":{\"kty\":\"RSA\",\"use\":\"enc\",\"alg\":\"RSA-OAEP-256\",\"n\":\"...\",\"e\":\"AQAB\"}}'");
+        System.err.println("  java -jar cvv-encryption-java.jar jwe-decrypt 'eyJhbGciOi...' '-----BEGIN PRIVATE KEY-----\\n...\\n-----END PRIVATE KEY-----'");
     }
 
     private static RevealInput parseRevealInput(String jsonPayload) {
@@ -97,6 +115,16 @@ public class Main {
         }
 
         return new RevealInput(cardRef, publicKey);
+    }
+
+    private static String parsePrivateKeyInput(String privateKeyInput) {
+        String trimmedInput = privateKeyInput.trim();
+        if (trimmedInput.startsWith("{")) {
+            Map<String, String> privateKeyObject = new JsonObjectParser(trimmedInput).parseObject();
+            return required(privateKeyObject, "privateKey");
+        }
+
+        return trimmedInput.replace("\\n", "\n");
     }
 
     private static String required(Map<String, String> values, String fieldName) {

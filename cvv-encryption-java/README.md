@@ -23,6 +23,8 @@ cvv-encryption-java/
   src/main/java/
     com/openfintechlab/jwe/
       Reveal.java
+      JWEEncrypt.java
+      JWEDecrypt.java
       model/
         RevealRequest.java
         EphemeralPublicKey.java
@@ -33,7 +35,7 @@ cvv-encryption-java/
       Main.java
 ```
 
-`com.sib.cvv.Main` is the packaged CLI entry point and owns all console interaction. `com.openfintechlab.jwe.Reveal` contains reveal request generation logic.
+`com.sib.cvv.Main` is the packaged CLI entry point and owns all console interaction. `com.openfintechlab.jwe` classes contain reveal, encryption, and decryption helper logic.
 
 ## Reveal Command
 
@@ -93,6 +95,29 @@ The encrypted payload contains:
 {"cardRef":"<cardRef>","pan":"<cardRef>","expiryMonth":"12","expiryYear":"29","cvv":"123","iat":1775901000,"exp":1775901030,"jti":"reveal-8f3a1c"}
 ```
 
+## JWE Decrypt Command
+
+Decrypts a compact JWE token using the RSA private key emitted by `reveal debug` and prints the decrypted payload JSON.
+
+### Usage
+
+```bash
+java -jar target/cvv-encryption-java.jar jwe-decrypt '<JWE-MESSAGE>' '<PRIVATE-KEY>'
+```
+
+The private key can be passed as raw PEM text with escaped newlines:
+
+```bash
+$ java -jar target/cvv-encryption-java.jar jwe-decrypt 'eyJhbGciOi...' '-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----'
+{"cardRef":"4012 8888 8888 1881","pan":"4012 8888 8888 1881","expiryMonth":"12","expiryYear":"29","cvv":"123","iat":1775901000,"exp":1775901030,"jti":"reveal-8f3a1c"}
+```
+
+It can also be passed as JSON when that is easier for shell scripting:
+
+```bash
+java -jar target/cvv-encryption-java.jar jwe-decrypt 'eyJhbGciOi...' '{"privateKey":"-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"}'
+```
+
 ## Output Fields
 
 | Field | Description |
@@ -142,6 +167,7 @@ The reveal tests verify:
 - CLI `reveal` and `reveal debug` print minified JSON to stdout;
 - request IDs are 32-character lowercase hexadecimal strings.
 - CLI `jwe-encrypt` prints compact JWE that decrypts to the expected header and payload.
+- CLI `jwe-decrypt` decrypts compact JWE tokens and supports raw PEM or JSON-wrapped private keys.
 
 ## Run From Classes
 
@@ -160,6 +186,8 @@ When running from classes, use `com.sib.cvv.Main`. The reveal CLI uses only JDK 
 | No arguments | Print usage to stderr and exit 1. |
 | `reveal` | Generate keys and output public-key request JSON. |
 | `reveal debug` | Generate keys and output request JSON with private key PEM. |
+| `jwe-encrypt <JSON-PAYLOAD>` | Encrypt card data using the reveal request public key. |
+| `jwe-decrypt <JWE-MESSAGE> <PRIVATE-KEY>` | Decrypt compact JWE using a private key PEM. |
 | Unknown command | Print usage to stderr and exit 1. |
 | Too many arguments | Print usage to stderr and exit 1. |
 
@@ -169,6 +197,8 @@ When running from classes, use `com.sib.cvv.Main`. The reveal CLI uses only JDK 
 - Uses `SecureRandom.getInstanceStrong()` when available, with `SecureRandom` fallback.
 - Encodes public key fields as base64url without padding.
 - Emits private key material only when `debug` is explicitly provided.
+- Encrypts with RSA-OAEP-256 and AES-256-GCM.
+- Decrypts only compact JWE tokens using `RSA-OAEP-256` and `A256GCM`.
 - Does not write keys or plaintext to disk.
 - Clears sensitive encoded private key byte arrays after PEM conversion.
 
