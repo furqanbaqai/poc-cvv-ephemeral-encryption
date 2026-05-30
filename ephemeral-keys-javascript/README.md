@@ -51,7 +51,14 @@ PowerShell example that pipes Step 1 output into Step 2:
 
 ```powershell
 $request = npm run start_step1 --silent
-npm run start_step2 -- $request
+$request | npm run start_step2 --silent
+```
+
+PowerShell can also pass the request as an argument when the variable is quoted:
+
+```powershell
+$request = npm run start_step1 --silent
+npm run start_step2 -- "$request"
 ```
 
 ## Stop Scripts
@@ -93,5 +100,6 @@ The npm scripts are wrappers around these direct commands:
 ```sh
 node ./src/step1_reveal.js
 node ./src/step2_encrypt.js '<json-input>'
+'<json-input>' | node ./src/step2_encrypt.js
 ```
 

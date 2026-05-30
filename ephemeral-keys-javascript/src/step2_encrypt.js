@@ -2,6 +2,7 @@
 'use strict';
 
 import crypto from "node:crypto";
+import fs from "node:fs";
 import { fileURLToPath } from "node:url";
 
 const VERSION = '1.0.0';
@@ -45,15 +46,17 @@ function validateInput(jsonString) {
     throw new Error("Missing JSON input. Usage: node ./src/step2_encrypt.js '<json-input>'");
   }
 
-  if (Buffer.byteLength(jsonString, 'utf8') > MAX_INPUT_BYTES) {
+  const trimmedJsonString = jsonString.trim();
+
+  if (Buffer.byteLength(trimmedJsonString, 'utf8') > MAX_INPUT_BYTES) {
     throw new Error('Input JSON exceeds the 8KB maximum size limit');
   }
 
   let parsed;
   try {
-    parsed = JSON.parse(jsonString);
+    parsed = JSON.parse(trimmedJsonString);
   } catch {
-    throw new Error('Invalid JSON input');
+    parsed = parsePowerShellStrippedJson(trimmedJsonString);
   }
 
   if (parsed === null || Array.isArray(parsed) || typeof parsed !== 'object') {
@@ -61,6 +64,137 @@ function validateInput(jsonString) {
   }
 
   return parsed;
+}
+
+/**
+ * Parses the object-like argument produced by legacy Windows PowerShell when
+ * embedded JSON quotes are stripped before the value reaches Node.js.
+ *
+ * This is intentionally narrow: it accepts only the reveal request shape used by
+ * this CLI, where all leaf values are strings and nested objects use braces.
+ *
+ * @param {string} input - PowerShell-stripped JSON-like object text.
+ * @returns {object} Parsed object.
+ * @throws {Error} When the input is not in the supported stripped format.
+ */
+function parsePowerShellStrippedJson(input) {
+  try {
+    const parsed = parsePowerShellObject(input);
+    if (parsed === null || Array.isArray(parsed) || typeof parsed !== 'object') {
+      throw new Error('not an object');
+    }
+    return parsed;
+  } catch {
+    throw new Error(
+      'Invalid JSON input. If you are using Windows PowerShell, pass "$request" in quotes or pipe JSON to stdin.',
+    );
+  }
+}
+
+/**
+ * Recursively parses a simple comma-separated object where keys and string
+ * values are unquoted, for example {requestId:abc,ephemeralPublicKey:{e:AQAB}}.
+ *
+ * @param {string} input - Stripped object text.
+ * @returns {object} Parsed object.
+ */
+function parsePowerShellObject(input) {
+  if (!input.startsWith('{') || !input.endsWith('}')) {
+    throw new Error('expected object');
+  }
+
+  const body = input.slice(1, -1);
+  const result = {};
+
+  if (body.trim().length === 0) {
+    return result;
+  }
+
+  for (const pair of splitTopLevel(body, ',')) {
+    const separatorIndex = findTopLevelSeparator(pair, ':');
+    if (separatorIndex <= 0) {
+      throw new Error('expected key-value pair');
+    }
+
+    const key = pair.slice(0, separatorIndex).trim();
+    const rawValue = pair.slice(separatorIndex + 1).trim();
+
+    if (!/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(key) || rawValue.length === 0) {
+      throw new Error('invalid key-value pair');
+    }
+
+    result[key] = rawValue.startsWith('{') ? parsePowerShellObject(rawValue) : rawValue;
+  }
+
+  return result;
+}
+
+/**
+ * Splits text on a delimiter only when not nested inside braces.
+ *
+ * @param {string} input - Text to split.
+ * @param {string} delimiter - Single-character delimiter.
+ * @returns {string[]} Top-level segments.
+ */
+function splitTopLevel(input, delimiter) {
+  const parts = [];
+  let depth = 0;
+  let start = 0;
+
+  for (let index = 0; index < input.length; index += 1) {
+    const char = input[index];
+
+    if (char === '{') {
+      depth += 1;
+    } else if (char === '}') {
+      depth -= 1;
+      if (depth < 0) {
+        throw new Error('unbalanced braces');
+      }
+    } else if (char === delimiter && depth === 0) {
+      parts.push(input.slice(start, index));
+      start = index + 1;
+    }
+  }
+
+  if (depth !== 0) {
+    throw new Error('unbalanced braces');
+  }
+
+  parts.push(input.slice(start));
+  return parts;
+}
+
+/**
+ * Finds a separator character outside nested braces.
+ *
+ * @param {string} input - Text to inspect.
+ * @param {string} separator - Single-character separator.
+ * @returns {number} Separator index, or -1 when not found.
+ */
+function findTopLevelSeparator(input, separator) {
+  let depth = 0;
+
+  for (let index = 0; index < input.length; index += 1) {
+    const char = input[index];
+
+    if (char === '{') {
+      depth += 1;
+    } else if (char === '}') {
+      depth -= 1;
+      if (depth < 0) {
+        throw new Error('unbalanced braces');
+      }
+    } else if (char === separator && depth === 0) {
+      return index;
+    }
+  }
+
+  if (depth !== 0) {
+    throw new Error('unbalanced braces');
+  }
+
+  return -1;
 }
 
 /**
@@ -294,6 +428,7 @@ function secureClear(buffer) {
  */
 function printHelp() {
   process.stdout.write("Usage: node ./src/step2_encrypt.js '<json-input>'\n");
+  process.stdout.write("   or: '<json-input>' | node ./src/step2_encrypt.js\n");
 }
 
 /**
@@ -317,11 +452,16 @@ function main() {
       return;
     }
 
-    if (args.length !== 1) {
+    if (args.length > 1) {
       throw new Error("Expected exactly one positional JSON argument. Usage: node ./src/step2_encrypt.js '<json-input>'");
     }
 
-    const input = validateInput(args[0]);
+    const jsonInput = args.length === 1
+      ? args[0]
+      : (process.stdin.isTTY
+        ? ''
+        : fs.readFileSync(0, 'utf8'));
+    const input = validateInput(jsonInput);
     const publicKey = extractPublicKey(input.ephemeralPublicKey);
     const payload = createPayload(input.cardRef);
 
@@ -348,9 +488,13 @@ export {
   encryptContent,
   encryptKey,
   extractPublicKey,
+  findTopLevelSeparator,
   generateCek,
   generateIv,
+  parsePowerShellObject,
+  parsePowerShellStrippedJson,
   secureClear,
+  splitTopLevel,
   validateInput,
 };
 
