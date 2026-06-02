@@ -5,8 +5,25 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>com.sib</groupId>
-  <artifactId>cvv-encryption-java</artifactId>
-  <version>1.0.0-SNAPSHOT</version>
+  <artifactId>cvv-encryption-util</artifactId>
+  <version>1.0.0-beta01</version>
+  <name>cvv-encryption-java</name>
+  <description>A Java utility for CVV encryption using ephemeral keys.</description>
+  <url>https://github.com/furqanbaqai/poc-cvv-ephemeral-encryption</url>
+  <licenses>
+    <license>
+      <name>MIT License</name>
+      <url>https://opensource.org/licenses/MIT</url>
+    </license>
+  </licenses>
+  <developers>
+    <developer>
+      <id>furqanbaqai</id>
+      <name>Furqan Baqai</name>
+      <email>baqai.furqan@gmail.com</email>
+      <organization>Independent Developer</organization>      
+    </developer>
+  </developers>
 
   <properties>
     <maven.compiler.release>17</maven.compiler.release>
