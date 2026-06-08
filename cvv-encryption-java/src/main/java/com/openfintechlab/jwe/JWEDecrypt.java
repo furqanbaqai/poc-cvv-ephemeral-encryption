@@ -66,16 +66,16 @@ public class JWEDecrypt {
      */
     public String decrypt() throws GeneralSecurityException {
         ParsedJwe parsedJwe = parseJwe(jweToken);
-        validateHeader(parsedJwe.headerJson());
+        validateHeader(parsedJwe.getHeaderJson());
 
         byte[] cek = null;
         byte[] encryptedContent = null;
         byte[] plaintext = null;
 
         try {
-            cek = decryptContentEncryptionKey(parsedJwe.encryptedKey(), parsePrivateKey(privateKeyPem));
-            encryptedContent = combineCiphertextAndTag(parsedJwe.ciphertext(), parsedJwe.tag());
-            plaintext = decryptContent(cek, parsedJwe.iv(), encryptedContent);
+            cek = decryptContentEncryptionKey(parsedJwe.getEncryptedKey(), parsePrivateKey(privateKeyPem));
+            encryptedContent = combineCiphertextAndTag(parsedJwe.getCiphertext(), parsedJwe.getTag());
+            plaintext = decryptContent(cek, parsedJwe.getIv(), encryptedContent);
             String payloadJson = new String(plaintext, StandardCharsets.UTF_8);
             validateJsonObjectPayload(payloadJson);
             return payloadJson;
@@ -94,7 +94,7 @@ public class JWEDecrypt {
         }
 
         for (String segment : segments) {
-            if (segment.isBlank() || !segment.matches("[A-Za-z0-9_-]+")) {
+            if (segment.trim().isEmpty() || !segment.matches("[A-Za-z0-9_-]+")) {
                 throw new GeneralSecurityException("Invalid JWE compact serialization format");
             }
         }
@@ -202,9 +202,11 @@ public class JWEDecrypt {
             encoded = Base64.getDecoder().decode(base64);
             PrivateKey privateKey = KeyFactory.getInstance("RSA").generatePrivate(new PKCS8EncodedKeySpec(encoded));
 
-            if (privateKey instanceof RSAPrivateKey rsaPrivateKey
-                    && rsaPrivateKey.getModulus().bitLength() < KeyGeneratorUtil.MIN_RSA_KEY_SIZE_BITS) {
-                throw new GeneralSecurityException("RSA private key must be at least 2048 bits");
+            if (privateKey instanceof RSAPrivateKey) {
+                RSAPrivateKey rsaPrivateKey = (RSAPrivateKey) privateKey;
+                if (rsaPrivateKey.getModulus().bitLength() < KeyGeneratorUtil.MIN_RSA_KEY_SIZE_BITS) {
+                    throw new GeneralSecurityException("RSA private key must be at least 2048 bits");
+                }
             }
 
             return privateKey;
@@ -243,18 +245,34 @@ public class JWEDecrypt {
 
             char escaped = quoted.charAt(++index);
             switch (escaped) {
-                case '"', '\\', '/' -> result.append(escaped);
-                case 'b' -> result.append('\b');
-                case 'f' -> result.append('\f');
-                case 'n' -> result.append('\n');
-                case 'r' -> result.append('\r');
-                case 't' -> result.append('\t');
-                case 'u' -> {
+                case '"':
+                case '\\':
+                case '/':
+                    result.append(escaped);
+                    break;
+                case 'b':
+                    result.append('\b');
+                    break;
+                case 'f':
+                    result.append('\f');
+                    break;
+                case 'n':
+                    result.append('\n');
+                    break;
+                case 'r':
+                    result.append('\r');
+                    break;
+                case 't':
+                    result.append('\t');
+                    break;
+                case 'u':
                     String hex = quoted.substring(index + 1, index + 5);
                     result.append((char) Integer.parseInt(hex, 16));
                     index += 4;
-                }
-                default -> result.append(escaped);
+                    break;
+                default:
+                    result.append(escaped);
+                    break;
             }
         }
 
@@ -273,7 +291,7 @@ public class JWEDecrypt {
     }
 
     private static String requireText(String value, String fieldName) {
-        if (value == null || value.isBlank()) {
+        if (value == null || value.trim().isEmpty()) {
             throw new IllegalArgumentException("Missing required field: " + fieldName);
         }
         return value;
@@ -285,7 +303,41 @@ public class JWEDecrypt {
         }
     }
 
-    private record ParsedJwe(String headerJson, byte[] encryptedKey, byte[] iv, byte[] ciphertext, byte[] tag) {
+    private static final class ParsedJwe {
+        private final String headerJson;
+        private final byte[] encryptedKey;
+        private final byte[] iv;
+        private final byte[] ciphertext;
+        private final byte[] tag;
+
+        private ParsedJwe(String headerJson, byte[] encryptedKey, byte[] iv, byte[] ciphertext, byte[] tag) {
+            this.headerJson = headerJson;
+            this.encryptedKey = encryptedKey;
+            this.iv = iv;
+            this.ciphertext = ciphertext;
+            this.tag = tag;
+        }
+
+        private String getHeaderJson() {
+            return headerJson;
+        }
+
+        private byte[] getEncryptedKey() {
+            return encryptedKey;
+        }
+
+        private byte[] getIv() {
+            return iv;
+        }
+
+        private byte[] getCiphertext() {
+            return ciphertext;
+        }
+
+        private byte[] getTag() {
+            return tag;
+        }
+
         private void clear() {
             JWEDecrypt.clear(encryptedKey);
             JWEDecrypt.clear(iv);

@@ -49,8 +49,8 @@ class JWEEncryptTest {
         String jwe = encryptor.encrypt();
         DecryptedJwe decryptedJwe = decryptJwe(jwe, revealRequest.getEphemeralPublicKey().getPrivateKey());
 
-        assertExpectedHeader(decryptedJwe.header());
-        assertExpectedPayload(decryptedJwe.payload(), "4012 8888 8888 1881");
+        assertExpectedHeader(decryptedJwe.getHeader());
+        assertExpectedPayload(decryptedJwe.getPayload(), "4012 8888 8888 1881");
     }
 
     @Test
@@ -58,14 +58,14 @@ class JWEEncryptTest {
         RevealRequest revealRequest = Reveal.buildRevealRequest(true, "card_12345", "mobile");
         String revealJson = JsonUtil.toMinifiedJson(revealRequest);
         CliResult result = runMain("jwe-encrypt", revealJson);
-        String jwe = result.stdout().trim();
+        String jwe = result.getStdout().trim();
         DecryptedJwe decryptedJwe = decryptJwe(jwe, revealRequest.getEphemeralPublicKey().getPrivateKey());
 
-        assertEquals("", result.stderr());
+        assertEquals("", result.getStderr());
         assertEquals(5, jwe.split("\\.").length);
         assertFalse(jwe.contains(System.lineSeparator() + System.lineSeparator()));
-        assertExpectedHeader(decryptedJwe.header());
-        assertExpectedPayload(decryptedJwe.payload(), "card_12345");
+        assertExpectedHeader(decryptedJwe.getHeader());
+        assertExpectedPayload(decryptedJwe.getPayload(), "card_12345");
     }
 
     @Test
@@ -79,13 +79,13 @@ class JWEEncryptTest {
                 + ",e:" + revealRequest.getEphemeralPublicKey().getE()
                 + "}}";
         CliResult result = runMain("jwe-encrypt", strippedJson);
-        String jwe = result.stdout().trim();
+        String jwe = result.getStdout().trim();
         DecryptedJwe decryptedJwe = decryptJwe(jwe, revealRequest.getEphemeralPublicKey().getPrivateKey());
 
-        assertEquals("", result.stderr());
+        assertEquals("", result.getStderr());
         assertEquals(5, jwe.split("\\.").length);
-        assertExpectedHeader(decryptedJwe.header());
-        assertExpectedPayload(decryptedJwe.payload(), "4012 8888 8888 1881");
+        assertExpectedHeader(decryptedJwe.getHeader());
+        assertExpectedPayload(decryptedJwe.getPayload(), "4012 8888 8888 1881");
     }
 
     private static void assertExpectedHeader(JsonNode header) {
@@ -157,26 +157,56 @@ class JWEEncryptTest {
                 new PKCS8EncodedKeySpec(Base64.getDecoder().decode(base64)));
     }
 
-    private static CliResult runMain(String... args) {
+    private static CliResult runMain(String... args) throws Exception {
         PrintStream originalOut = System.out;
         PrintStream originalErr = System.err;
         ByteArrayOutputStream stdout = new ByteArrayOutputStream();
         ByteArrayOutputStream stderr = new ByteArrayOutputStream();
 
         try {
-            System.setOut(new PrintStream(stdout, true, StandardCharsets.UTF_8));
-            System.setErr(new PrintStream(stderr, true, StandardCharsets.UTF_8));
+            System.setOut(new PrintStream(stdout, true, StandardCharsets.UTF_8.name()));
+            System.setErr(new PrintStream(stderr, true, StandardCharsets.UTF_8.name()));
             Main.main(args);
-            return new CliResult(stdout.toString(StandardCharsets.UTF_8), stderr.toString(StandardCharsets.UTF_8));
+            return new CliResult(stdout.toString(StandardCharsets.UTF_8.name()), stderr.toString(StandardCharsets.UTF_8.name()));
         } finally {
             System.setOut(originalOut);
             System.setErr(originalErr);
         }
     }
 
-    private record DecryptedJwe(JsonNode header, JsonNode payload) {
+    private static final class DecryptedJwe {
+        private final JsonNode header;
+        private final JsonNode payload;
+
+        private DecryptedJwe(JsonNode header, JsonNode payload) {
+            this.header = header;
+            this.payload = payload;
+        }
+
+        private JsonNode getHeader() {
+            return header;
+        }
+
+        private JsonNode getPayload() {
+            return payload;
+        }
     }
 
-    private record CliResult(String stdout, String stderr) {
+    private static final class CliResult {
+        private final String stdout;
+        private final String stderr;
+
+        private CliResult(String stdout, String stderr) {
+            this.stdout = stdout;
+            this.stderr = stderr;
+        }
+
+        private String getStdout() {
+            return stdout;
+        }
+
+        private String getStderr() {
+            return stderr;
+        }
     }
 }

@@ -32,19 +32,19 @@ public class Main {
             if (isJweEncryptCommand(args)) {
                 RevealInput revealInput = parseRevealInput(args[1]);
                 JWEEncrypt encryptor = new JWEEncrypt(
-                        revealInput.cardRef(),
-                        revealInput.cardRef(),
+                        revealInput.getCardRef(),
+                        revealInput.getCardRef(),
                         EXPIRY_MONTH,
                         EXPIRY_YEAR,
                         CVV,
                         PAYLOAD_IAT,
                         PAYLOAD_EXP,
                         PAYLOAD_JTI,
-                        revealInput.publicKey().get("kty"),
-                        revealInput.publicKey().get("use"),
-                        revealInput.publicKey().get("alg"),
-                        revealInput.publicKey().get("n"),
-                        revealInput.publicKey().get("e"));
+                        revealInput.getPublicKey().get("kty"),
+                        revealInput.getPublicKey().get("use"),
+                        revealInput.getPublicKey().get("alg"),
+                        revealInput.getPublicKey().get("n"),
+                        revealInput.getPublicKey().get("e"));
                 System.out.println(encryptor.encrypt());
                 return;
             }
@@ -75,14 +75,14 @@ public class Main {
     }
 
     private static boolean isJweEncryptCommand(String[] args) {
-        return args.length == 2 && COMMAND_JWE_ENCRYPT.equals(args[0]) && !args[1].isBlank();
+        return args.length == 2 && COMMAND_JWE_ENCRYPT.equals(args[0]) && !isBlank(args[1]);
     }
 
     private static boolean isJweDecryptCommand(String[] args) {
         return args.length == 3
                 && COMMAND_JWE_DECRYPT.equals(args[0])
-                && !args[1].isBlank()
-                && !args[2].isBlank();
+                && !isBlank(args[1])
+                && !isBlank(args[2]);
     }
 
     private static void printUsage() {
@@ -129,13 +129,32 @@ public class Main {
 
     private static String required(Map<String, String> values, String fieldName) {
         String value = values.get(fieldName);
-        if (value == null || value.isBlank()) {
+        if (isBlank(value)) {
             throw new IllegalArgumentException("Missing required JSON field: " + fieldName);
         }
         return value;
     }
 
-    private record RevealInput(String cardRef, Map<String, String> publicKey) {
+    private static boolean isBlank(String value) {
+        return value == null || value.trim().isEmpty();
+    }
+
+    private static final class RevealInput {
+        private final String cardRef;
+        private final Map<String, String> publicKey;
+
+        private RevealInput(String cardRef, Map<String, String> publicKey) {
+            this.cardRef = cardRef;
+            this.publicKey = publicKey;
+        }
+
+        private String getCardRef() {
+            return cardRef;
+        }
+
+        private Map<String, String> getPublicKey() {
+            return publicKey;
+        }
     }
 
     private static final class JsonObjectParser {
@@ -300,16 +319,26 @@ public class Main {
             }
 
             char escaped = input.charAt(index++);
-            return switch (escaped) {
-                case '"', '\\', '/' -> escaped;
-                case 'b' -> '\b';
-                case 'f' -> '\f';
-                case 'n' -> '\n';
-                case 'r' -> '\r';
-                case 't' -> '\t';
-                case 'u' -> parseUnicodeEscape();
-                default -> throw new IllegalArgumentException("Invalid JSON payload");
-            };
+            switch (escaped) {
+                case '"':
+                case '\\':
+                case '/':
+                    return escaped;
+                case 'b':
+                    return '\b';
+                case 'f':
+                    return '\f';
+                case 'n':
+                    return '\n';
+                case 'r':
+                    return '\r';
+                case 't':
+                    return '\t';
+                case 'u':
+                    return parseUnicodeEscape();
+                default:
+                    throw new IllegalArgumentException("Invalid JSON payload");
+            }
         }
 
         private char parseUnicodeEscape() {

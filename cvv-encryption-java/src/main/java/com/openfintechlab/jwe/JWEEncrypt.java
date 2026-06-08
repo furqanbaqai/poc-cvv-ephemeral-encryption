@@ -219,7 +219,7 @@ public class JWEEncrypt {
     }
 
     private static String requireText(String value, String fieldName) {
-        if (value == null || value.isBlank()) {
+        if (value == null || value.trim().isEmpty()) {
             throw new IllegalArgumentException("Missing required field: " + fieldName);
         }
         return value;

@@ -35,9 +35,9 @@ class JWEDecryptTest {
         String jwe = encryptForRevealRequest(revealRequest);
 
         CliResult result = runMain("jwe-decrypt", jwe, revealRequest.getEphemeralPublicKey().getPrivateKey());
-        JsonNode payload = OBJECT_MAPPER.readTree(result.stdout().trim());
+        JsonNode payload = OBJECT_MAPPER.readTree(result.getStdout().trim());
 
-        assertEquals("", result.stderr());
+        assertEquals("", result.getStderr());
         assertExpectedPayload(payload, "card_12345");
     }
 
@@ -50,9 +50,9 @@ class JWEDecryptTest {
                 + "\"}";
 
         CliResult result = runMain("jwe-decrypt", jwe, privateKeyJson);
-        JsonNode payload = OBJECT_MAPPER.readTree(result.stdout().trim());
+        JsonNode payload = OBJECT_MAPPER.readTree(result.getStdout().trim());
 
-        assertEquals("", result.stderr());
+        assertEquals("", result.getStderr());
         assertExpectedPayload(payload, "4012 8888 8888 1881");
     }
 
@@ -105,23 +105,38 @@ class JWEDecryptTest {
         assertEquals("reveal-8f3a1c", payload.get("jti").asText());
     }
 
-    private static CliResult runMain(String... args) {
+    private static CliResult runMain(String... args) throws Exception {
         PrintStream originalOut = System.out;
         PrintStream originalErr = System.err;
         ByteArrayOutputStream stdout = new ByteArrayOutputStream();
         ByteArrayOutputStream stderr = new ByteArrayOutputStream();
 
         try {
-            System.setOut(new PrintStream(stdout, true, StandardCharsets.UTF_8));
-            System.setErr(new PrintStream(stderr, true, StandardCharsets.UTF_8));
+            System.setOut(new PrintStream(stdout, true, StandardCharsets.UTF_8.name()));
+            System.setErr(new PrintStream(stderr, true, StandardCharsets.UTF_8.name()));
             Main.main(args);
-            return new CliResult(stdout.toString(StandardCharsets.UTF_8), stderr.toString(StandardCharsets.UTF_8));
+            return new CliResult(stdout.toString(StandardCharsets.UTF_8.name()), stderr.toString(StandardCharsets.UTF_8.name()));
         } finally {
             System.setOut(originalOut);
             System.setErr(originalErr);
         }
     }
 
-    private record CliResult(String stdout, String stderr) {
+    private static final class CliResult {
+        private final String stdout;
+        private final String stderr;
+
+        private CliResult(String stdout, String stderr) {
+            this.stdout = stdout;
+            this.stderr = stderr;
+        }
+
+        private String getStdout() {
+            return stdout;
+        }
+
+        private String getStderr() {
+            return stderr;
+        }
     }
 }

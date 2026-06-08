@@ -32,8 +32,12 @@ public final class KeyGeneratorUtil {
         keyPairGenerator.initialize(MIN_RSA_KEY_SIZE_BITS, createSecureRandom());
         KeyPair keyPair = keyPairGenerator.generateKeyPair();
 
-        if (!(keyPair.getPublic() instanceof RSAPublicKey publicKey)
-                || publicKey.getModulus().bitLength() < MIN_RSA_KEY_SIZE_BITS) {
+        if (!(keyPair.getPublic() instanceof RSAPublicKey)) {
+            throw new GeneralSecurityException("Generated public key is not RSA");
+        }
+
+        RSAPublicKey publicKey = (RSAPublicKey) keyPair.getPublic();
+        if (publicKey.getModulus().bitLength() < MIN_RSA_KEY_SIZE_BITS) {
             throw new GeneralSecurityException("Generated RSA key size is below 2048 bits");
         }
 

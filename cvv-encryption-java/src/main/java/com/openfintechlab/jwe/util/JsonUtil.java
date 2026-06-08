@@ -17,11 +17,13 @@ public final class JsonUtil {
      * @return minified JSON string
      */
     public static String toMinifiedJson(Object object) {
-        if (object instanceof RevealRequest revealRequest) {
+        if (object instanceof RevealRequest) {
+            RevealRequest revealRequest = (RevealRequest) object;
             return toRevealRequestJson(revealRequest);
         }
 
-        if (object instanceof EphemeralPublicKey ephemeralPublicKey) {
+        if (object instanceof EphemeralPublicKey) {
+            EphemeralPublicKey ephemeralPublicKey = (EphemeralPublicKey) object;
             return toEphemeralPublicKeyJson(ephemeralPublicKey);
         }
 
@@ -76,20 +78,34 @@ public final class JsonUtil {
         for (int index = 0; index < value.length(); index++) {
             char character = value.charAt(index);
             switch (character) {
-                case '"' -> escaped.append("\\\"");
-                case '\\' -> escaped.append("\\\\");
-                case '\b' -> escaped.append("\\b");
-                case '\f' -> escaped.append("\\f");
-                case '\n' -> escaped.append("\\n");
-                case '\r' -> escaped.append("\\r");
-                case '\t' -> escaped.append("\\t");
-                default -> {
+                case '"':
+                    escaped.append("\\\"");
+                    break;
+                case '\\':
+                    escaped.append("\\\\");
+                    break;
+                case '\b':
+                    escaped.append("\\b");
+                    break;
+                case '\f':
+                    escaped.append("\\f");
+                    break;
+                case '\n':
+                    escaped.append("\\n");
+                    break;
+                case '\r':
+                    escaped.append("\\r");
+                    break;
+                case '\t':
+                    escaped.append("\\t");
+                    break;
+                default:
                     if (character < 0x20) {
                         escaped.append(String.format("\\u%04x", (int) character));
                     } else {
                         escaped.append(character);
                     }
-                }
+                    break;
             }
         }
 

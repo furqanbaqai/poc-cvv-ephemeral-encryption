@@ -4,7 +4,7 @@ Java implementation for generating a JWE reveal request payload. The CLI creates
 
 ## Prerequisites
 
-- Java 17 or later
+- Java 8 or later
 - Apache Maven 3.8 or later
 
 Verify the tools are available:
@@ -151,6 +151,8 @@ The runnable artifact is:
 ```text
 target/cvv-encryption-java.jar
 ```
+
+The packaged JAR is compiled for Java 8 bytecode compatibility (`major version 52`) so it can be imported by Java 8 runtimes and newer.
 
 ## Test
 

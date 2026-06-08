@@ -98,9 +98,9 @@ class RevealTest {
     @Test
     void mainRevealCommandPrintsMinifiedJsonToStdout() throws Exception {
         CliResult result = runMain("reveal");
-        JsonNode root = OBJECT_MAPPER.readTree(result.stdout().trim());
+        JsonNode root = OBJECT_MAPPER.readTree(result.getStdout().trim());
 
-        assertEquals("", result.stderr());
+        assertEquals("", result.getStderr());
         assertEquals("4012 8888 8888 1881", root.get("cardRef").asText());
         assertEquals("mobile", root.get("channel").asText());
         assertTrue(root.get("requestId").asText().matches("[0-9a-f]{32}"));
@@ -110,16 +110,16 @@ class RevealTest {
         assertTrue(root.get("ephemeralPublicKey").get("n").asText().matches("[A-Za-z0-9_-]+"));
         assertEquals("AQAB", root.get("ephemeralPublicKey").get("e").asText());
         assertFalse(root.get("ephemeralPublicKey").has("privateKey"));
-        assertFalse(result.stdout().contains(System.lineSeparator() + System.lineSeparator()));
+        assertFalse(result.getStdout().contains(System.lineSeparator() + System.lineSeparator()));
     }
 
     @Test
     void mainRevealDebugCommandPrintsPrivateKeyInJson() throws Exception {
         CliResult result = runMain("reveal", "debug");
-        JsonNode root = OBJECT_MAPPER.readTree(result.stdout().trim());
+        JsonNode root = OBJECT_MAPPER.readTree(result.getStdout().trim());
         String privateKey = root.get("ephemeralPublicKey").get("privateKey").asText();
 
-        assertEquals("", result.stderr());
+        assertEquals("", result.getStderr());
         assertTrue(privateKey.startsWith("-----BEGIN PRIVATE KEY-----\n"));
         assertTrue(privateKey.endsWith("\n-----END PRIVATE KEY-----"));
         assertDoesNotThrow(() -> KeyFactory.getInstance("RSA")
@@ -150,23 +150,38 @@ class RevealTest {
         return Base64.getDecoder().decode(base64);
     }
 
-    private static CliResult runMain(String... args) {
+    private static CliResult runMain(String... args) throws Exception {
         PrintStream originalOut = System.out;
         PrintStream originalErr = System.err;
         ByteArrayOutputStream stdout = new ByteArrayOutputStream();
         ByteArrayOutputStream stderr = new ByteArrayOutputStream();
 
         try {
-            System.setOut(new PrintStream(stdout, true, StandardCharsets.UTF_8));
-            System.setErr(new PrintStream(stderr, true, StandardCharsets.UTF_8));
+            System.setOut(new PrintStream(stdout, true, StandardCharsets.UTF_8.name()));
+            System.setErr(new PrintStream(stderr, true, StandardCharsets.UTF_8.name()));
             Main.main(args);
-            return new CliResult(stdout.toString(StandardCharsets.UTF_8), stderr.toString(StandardCharsets.UTF_8));
+            return new CliResult(stdout.toString(StandardCharsets.UTF_8.name()), stderr.toString(StandardCharsets.UTF_8.name()));
         } finally {
             System.setOut(originalOut);
             System.setErr(originalErr);
         }
     }
 
-    private record CliResult(String stdout, String stderr) {
+    private static final class CliResult {
+        private final String stdout;
+        private final String stderr;
+
+        private CliResult(String stdout, String stderr) {
+            this.stdout = stdout;
+            this.stderr = stderr;
+        }
+
+        private String getStdout() {
+            return stdout;
+        }
+
+        private String getStderr() {
+            return stderr;
+        }
     }
 }
