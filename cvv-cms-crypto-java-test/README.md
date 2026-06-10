@@ -56,17 +56,42 @@ mvn test
 
 ## Commands
 
+The CLI accepts the command name followed by either the legacy 2-parameter form or the nested JOSE 3-parameter form.
+
+Usage printed by the application:
+
+```powershell
+Usage:
+  cms-encrypt <text> <public-key-pem>
+  cms-encrypt <text> <encryption-public-key-pem> <signing-private-key-pem>
+  cms-decrypt <cipher-text> <private-key-pem>
+  cms-decrypt <cipher-text> <decryption-private-key-pem> <verification-public-key-pem>
+```
+
+Run the commands through the packaged jar:
+
 ```powershell
 java -jar .\target\cvv-cms-crypto-java-test-1.0.0-SNAPSHOT.jar cms-encrypt <TEXT> <PUBLIC_KEY_PEM>
-java -jar .\target\cvv-cms-crypto-java-test-1.0.0-SNAPSHOT.jar cms-decrypt <CIPHER_TEXT> <PRIVATE_KEY_PEM>
-```
-
-Nested JOSE commands add the key needed for the outer JWS signature or verification. PEM formats stay the same:
-
-```powershell
 java -jar .\target\cvv-cms-crypto-java-test-1.0.0-SNAPSHOT.jar cms-encrypt <TEXT> <ENCRYPTION_PUBLIC_KEY_PEM> <SIGNING_PRIVATE_KEY_PEM>
+java -jar .\target\cvv-cms-crypto-java-test-1.0.0-SNAPSHOT.jar cms-decrypt <CIPHER_TEXT> <PRIVATE_KEY_PEM>
 java -jar .\target\cvv-cms-crypto-java-test-1.0.0-SNAPSHOT.jar cms-decrypt <CIPHER_TEXT> <DECRYPTION_PRIVATE_KEY_PEM> <VERIFICATION_PUBLIC_KEY_PEM>
 ```
+
+### Command options
+
+| Command | Parameters | Input token | Output | Notes |
+| --- | --- | --- | --- | --- |
+| `cms-encrypt` | `<text> <public-key-pem>` | Plain text | Base64 `OFTLCMS` envelope | Legacy behavior. Encrypts with the X.509 public key PEM. |
+| `cms-encrypt` | `<text> <encryption-public-key-pem> <signing-private-key-pem>` | Plain text | Nested compact JWS-over-JWE token | Encrypts the text as compact JWE, then signs the JWE with PS256. |
+| `cms-decrypt` | `<cipher-text> <private-key-pem>` | Base64 `OFTLCMS` envelope or plain compact JWE | Plain text | Legacy decrypt behavior is preserved. Compact JWE input is also accepted. |
+| `cms-decrypt` | `<cipher-text> <decryption-private-key-pem> <verification-public-key-pem>` | Nested compact JWS-over-JWE, plain compact JWE, or legacy envelope | Plain text | Verifies nested JWS with the public key before decrypting the inner JWE. |
+
+PEM formats stay the same for all command forms:
+
+- Public keys use X.509 PEM: `-----BEGIN PUBLIC KEY-----`.
+- Private keys use PKCS#8 PEM: `-----BEGIN PRIVATE KEY-----`.
+
+Nested JOSE mode requires an extra key because the outer `PS256` JWS signature is created with a private key and verified with the matching public key.
 
 ## Encrypt
 
