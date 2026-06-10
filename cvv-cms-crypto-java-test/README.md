@@ -45,7 +45,15 @@ mvn package
 This creates:
 
 ```powershell
-.\target\cvv-cms-crypto-java-test-1.0.0-SNAPSHOT.jar
+.\target\cvv-cms-crypto-java-test-1.0.0-beta.01.jar
+```
+
+The jar name comes from the Maven coordinates in `pom.xml`:
+
+```text
+groupId: com.sib
+artifactId: cvv-cms-crypto-java-test
+version: 1.0.0-beta.01
 ```
 
 ## Test
@@ -63,18 +71,20 @@ Usage printed by the application:
 ```powershell
 Usage:
   cms-encrypt <text> <public-key-pem>
-  cms-encrypt <text> <encryption-public-key-pem> <signing-private-key-pem>
+  cms-encrypt-jws <text> <encryption-public-key-pem> <signing-private-key-pem>
   cms-decrypt <cipher-text> <private-key-pem>
-  cms-decrypt <cipher-text> <decryption-private-key-pem> <verification-public-key-pem>
+  cms-decrypt-jws <cipher-text> <decryption-private-key-pem> <verification-public-key-pem>
+  cms-decrypt-jws ignore-expiry <cipher-text> <decryption-private-key-pem> <verification-public-key-pem>
 ```
 
 Run the commands through the packaged jar:
 
 ```powershell
-java -jar .\target\cvv-cms-crypto-java-test-1.0.0-SNAPSHOT.jar cms-encrypt <TEXT> <PUBLIC_KEY_PEM>
-java -jar .\target\cvv-cms-crypto-java-test-1.0.0-SNAPSHOT.jar cms-encrypt <TEXT> <ENCRYPTION_PUBLIC_KEY_PEM> <SIGNING_PRIVATE_KEY_PEM>
-java -jar .\target\cvv-cms-crypto-java-test-1.0.0-SNAPSHOT.jar cms-decrypt <CIPHER_TEXT> <PRIVATE_KEY_PEM>
-java -jar .\target\cvv-cms-crypto-java-test-1.0.0-SNAPSHOT.jar cms-decrypt <CIPHER_TEXT> <DECRYPTION_PRIVATE_KEY_PEM> <VERIFICATION_PUBLIC_KEY_PEM>
+java -jar .\target\cvv-cms-crypto-java-test-1.0.0-beta.01.jar cms-encrypt <TEXT> <PUBLIC_KEY_PEM>
+java -jar .\target\cvv-cms-crypto-java-test-1.0.0-beta.01.jar cms-encrypt-jws <TEXT> <ENCRYPTION_PUBLIC_KEY_PEM> <SIGNING_PRIVATE_KEY_PEM>
+java -jar .\target\cvv-cms-crypto-java-test-1.0.0-beta.01.jar cms-decrypt <CIPHER_TEXT> <PRIVATE_KEY_PEM>
+java -jar .\target\cvv-cms-crypto-java-test-1.0.0-beta.01.jar cms-decrypt-jws <CIPHER_TEXT> <DECRYPTION_PRIVATE_KEY_PEM> <VERIFICATION_PUBLIC_KEY_PEM>
+java -jar .\target\cvv-cms-crypto-java-test-1.0.0-beta.01.jar cms-decrypt-jws ignore-expiry <CIPHER_TEXT> <DECRYPTION_PRIVATE_KEY_PEM> <VERIFICATION_PUBLIC_KEY_PEM>
 ```
 
 ### Command options
@@ -82,9 +92,10 @@ java -jar .\target\cvv-cms-crypto-java-test-1.0.0-SNAPSHOT.jar cms-decrypt <CIPH
 | Command | Parameters | Input token | Output | Notes |
 | --- | --- | --- | --- | --- |
 | `cms-encrypt` | `<text> <public-key-pem>` | Plain text | Base64 `OFTLCMS` envelope | Legacy behavior. Encrypts with the X.509 public key PEM. |
-| `cms-encrypt` | `<text> <encryption-public-key-pem> <signing-private-key-pem>` | Plain text | Nested compact JWS-over-JWE token | Encrypts the text as compact JWE, then signs the JWE with PS256. |
+| `cms-encrypt-jws` | `<text> <encryption-public-key-pem> <signing-private-key-pem>` | Plain text | Nested compact JWS-over-JWE token | Encrypts the text as compact JWE, then signs the JWE with PS256. |
 | `cms-decrypt` | `<cipher-text> <private-key-pem>` | Base64 `OFTLCMS` envelope or plain compact JWE | Plain text | Legacy decrypt behavior is preserved. Compact JWE input is also accepted. |
-| `cms-decrypt` | `<cipher-text> <decryption-private-key-pem> <verification-public-key-pem>` | Nested compact JWS-over-JWE, plain compact JWE, or legacy envelope | Plain text | Verifies nested JWS with the public key before decrypting the inner JWE. |
+| `cms-decrypt-jws` | `<cipher-text> <decryption-private-key-pem> <verification-public-key-pem>` | Nested compact JWS-over-JWE, plain compact JWE, or legacy envelope | Plain text | Verifies nested JWS with the public key before decrypting the inner JWE. |
+| `cms-decrypt-jws` | `ignore-expiry <cipher-text> <decryption-private-key-pem> <verification-public-key-pem>` | Nested compact JWS-over-JWE, plain compact JWE, or legacy envelope | Plain text | Verifies the JWS signature, then decrypts without validating JWE `iat` or `exp`. |
 
 PEM formats stay the same for all command forms:
 
@@ -92,6 +103,8 @@ PEM formats stay the same for all command forms:
 - Private keys use PKCS#8 PEM: `-----BEGIN PRIVATE KEY-----`.
 
 Nested JOSE mode requires an extra key because the outer `PS256` JWS signature is created with a private key and verified with the matching public key.
+
+Use `ignore-expiry` only when an expired nested JOSE token must be decrypted for recovery or troubleshooting. The option does not skip JWS signature verification; it only skips JWE `iat` and `exp` timestamp validation.
 
 ## Encrypt
 
@@ -108,7 +121,7 @@ kwIDAQAB
 -----END PUBLIC KEY-----
 "@
 
-$cipherText = java -jar .\target\cvv-cms-crypto-java-test-1.0.0-SNAPSHOT.jar cms-encrypt "123" $publicKey
+$cipherText = java -jar .\target\cvv-cms-crypto-java-test-1.0.0-beta.01.jar cms-encrypt "123" $publicKey
 $cipherText
 ```
 
@@ -146,7 +159,7 @@ MU5j7g7qSFUJXTbNlEo17gs=
 -----END PRIVATE KEY-----
 "@
 
-java -jar .\target\cvv-cms-crypto-java-test-1.0.0-SNAPSHOT.jar cms-decrypt $cipherText $privateKey
+java -jar .\target\cvv-cms-crypto-java-test-1.0.0-beta.01.jar cms-decrypt $cipherText $privateKey
 ```
 
 Expected output for the example above:
@@ -154,3 +167,46 @@ Expected output for the example above:
 ```text
 123
 ```
+
+## Appendix A: Export Keys to PEM and PKCS12
+
+Commands for exporting private key to PEM / p12 format.
+
+View list of all certs / keys in the JKS:
+
+```powershell
+keytool -list -keystore key.jks
+```
+
+Example alias entry:
+
+```text
+apiuatencryption, May 13, 2026, PrivateKeyEntry,
+```
+
+Step 1: Export the entire JKS keystore to a PKCS12 (`.p12`) file:
+
+```powershell
+keytool -importkeystore -srckeystore key.jks -destkeystore key.p12 -srcstoretype JKS -deststoretype PKCS12
+```
+
+The terminal will prompt you to create a destination password for the `.p12` file and to enter the existing source password for the `.jks` file.
+
+Step 2: Export the private key in PEM format:
+
+```powershell
+openssl pkcs12 -in key.p12 -nocerts -out private_key.pem -nodes
+```
+
+Step 3: Export the public key / certificate in PEM format:
+
+```powershell
+openssl pkcs12 -in key.p12 -clcerts -nokeys -out public_cert.pem
+```
+
+The following public key export command is supported by the Java POC application:
+
+```powershell
+openssl pkcs12 -in key.p12 -clcerts -nokeys | openssl x509 -pubkey -noout > public_key.pem
+```
+

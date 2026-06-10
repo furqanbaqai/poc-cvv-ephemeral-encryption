@@ -3,6 +3,7 @@ package com.openfintechlab.cms;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
+import java.time.Instant;
 import java.util.Base64;
 
 import org.junit.jupiter.api.Test;
@@ -78,6 +79,31 @@ class CMSDecryptTest {
         assertTrue(exception.getMessage().contains("Unsupported JWS algorithm"));
     }
 
+    @Test
+    void decryptFromNestedJoseRejectsExpiredTokenByDefault() throws Exception {
+        KeyPair keyPair = generateRsaKeyPair();
+        String token = expiredNestedJoseToken("expired text", keyPair);
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
+                CMSDecrypt.decryptFromNestedJose(token, toPrivateKeyPem(keyPair), toPublicKeyPem(keyPair)));
+
+        assertTrue(exception.getMessage().contains("Token expired"));
+    }
+
+    @Test
+    void decryptFromNestedJoseIgnoresExpiredTokenWhenRequested() throws Exception {
+        KeyPair keyPair = generateRsaKeyPair();
+        String token = expiredNestedJoseToken("expired text", keyPair);
+
+        String decryptedText = CMSDecrypt.decryptFromNestedJose(
+                token,
+                toPrivateKeyPem(keyPair),
+                toPublicKeyPem(keyPair),
+                true);
+
+        assertEquals("expired text", decryptedText);
+    }
+
     private static KeyPair generateRsaKeyPair() throws Exception {
         KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
         keyPairGenerator.initialize(2048);
@@ -112,5 +138,14 @@ class CMSDecryptTest {
         String header = "{\"alg\":\"" + alg + "\",\"typ\":\"JOSE\",\"cty\":\"" + cty + "\",\"kid\":\"keyid\"}";
         parts[0] = Base64.getUrlEncoder().withoutPadding().encodeToString(header.getBytes(StandardCharsets.UTF_8));
         return parts[0] + "." + parts[1] + "." + parts[2];
+    }
+
+    private static String expiredNestedJoseToken(String plainText, KeyPair keyPair) throws Exception {
+        String compactJwe = JoseSupport.encryptToCompactJwe(
+                plainText,
+                keyPair.getPublic(),
+                Instant.parse("2026-01-01T00:00:00Z"),
+                Instant.parse("2026-01-01T00:01:00Z"));
+        return JoseSupport.signCompactJwe(compactJwe, keyPair.getPrivate());
     }
 }

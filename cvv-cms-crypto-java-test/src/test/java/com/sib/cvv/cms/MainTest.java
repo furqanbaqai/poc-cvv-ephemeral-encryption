@@ -36,7 +36,7 @@ class MainTest {
         ByteArrayOutputStream error = new ByteArrayOutputStream();
 
         int exitCode = Main.run(new String[] {
-                "cms-encrypt",
+                "cms-encrypt-jws",
                 "test cvv text",
                 toPublicKeyPem(keyPair),
                 toPrivateKeyPem(keyPair)},
@@ -71,12 +71,65 @@ class MainTest {
         ByteArrayOutputStream output = new ByteArrayOutputStream();
         ByteArrayOutputStream error = new ByteArrayOutputStream();
 
-        int exitCode = Main.run(new String[] {"cms-decrypt", cipherText, toPrivateKeyPem(keyPair), toPublicKeyPem(keyPair)},
+        int exitCode = Main.run(new String[] {"cms-decrypt-jws", cipherText, toPrivateKeyPem(keyPair), toPublicKeyPem(keyPair)},
                 new PrintStream(output), new PrintStream(error));
 
         assertEquals(0, exitCode);
         assertEquals("", error.toString());
         assertEquals(plainText + System.lineSeparator(), output.toString());
+    }
+
+    @Test
+    void cmsDecryptJwsAcceptsIgnoreExpiryOption() throws Exception {
+        KeyPair keyPair = generateRsaKeyPair();
+        String plainText = "test cvv text";
+        String cipherText = CMSEncrypt.encryptToNestedJose(plainText, toPublicKeyPem(keyPair), toPrivateKeyPem(keyPair));
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        ByteArrayOutputStream error = new ByteArrayOutputStream();
+
+        int exitCode = Main.run(new String[] {
+                "cms-decrypt-jws",
+                "ignore-expiry",
+                cipherText,
+                toPrivateKeyPem(keyPair),
+                toPublicKeyPem(keyPair)},
+                new PrintStream(output), new PrintStream(error));
+
+        assertEquals(0, exitCode);
+        assertEquals("", error.toString());
+        assertEquals(plainText + System.lineSeparator(), output.toString());
+    }
+
+    @Test
+    void legacyCommandsRejectNestedArgumentCounts() throws Exception {
+        KeyPair keyPair = generateRsaKeyPair();
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        ByteArrayOutputStream error = new ByteArrayOutputStream();
+
+        int encryptExitCode = Main.run(new String[] {
+                "cms-encrypt",
+                "test cvv text",
+                toPublicKeyPem(keyPair),
+                toPrivateKeyPem(keyPair)},
+                new PrintStream(output), new PrintStream(error));
+
+        assertEquals(1, encryptExitCode);
+        assertEquals("", output.toString());
+        assertTrue(error.toString().contains("cms-encrypt-jws <text>"));
+
+        output.reset();
+        error.reset();
+
+        int decryptExitCode = Main.run(new String[] {
+                "cms-decrypt",
+                "cipher-text",
+                toPrivateKeyPem(keyPair),
+                toPublicKeyPem(keyPair)},
+                new PrintStream(output), new PrintStream(error));
+
+        assertEquals(1, decryptExitCode);
+        assertEquals("", output.toString());
+        assertTrue(error.toString().contains("cms-decrypt-jws <cipher-text>"));
     }
 
     @Test
@@ -90,7 +143,10 @@ class MainTest {
         assertEquals(1, exitCode);
         assertEquals("", output.toString());
         assertTrue(error.toString().contains("cms-encrypt <text> <public-key-pem>"));
+        assertTrue(error.toString().contains("cms-encrypt-jws <text> <encryption-public-key-pem> <signing-private-key-pem>"));
         assertTrue(error.toString().contains("cms-decrypt <cipher-text> <private-key-pem>"));
+        assertTrue(error.toString().contains("cms-decrypt-jws <cipher-text> <decryption-private-key-pem> <verification-public-key-pem>"));
+        assertTrue(error.toString().contains("cms-decrypt-jws ignore-expiry <cipher-text> <decryption-private-key-pem> <verification-public-key-pem>"));
     }
 
     private static KeyPair generateRsaKeyPair() throws Exception {

@@ -50,7 +50,11 @@ final class JoseSupport {
     static String encryptToCompactJwe(String plainText, PublicKey publicKey) throws Exception {
         Instant issuedAt = Instant.now().truncatedTo(ChronoUnit.SECONDS);
         Instant expiresAt = issuedAt.plus(TOKEN_TTL_MINUTES, ChronoUnit.MINUTES);
+        return encryptToCompactJwe(plainText, publicKey, issuedAt, expiresAt);
+    }
 
+    static String encryptToCompactJwe(String plainText, PublicKey publicKey, Instant issuedAt, Instant expiresAt)
+            throws Exception {
         Map<String, String> header = new LinkedHashMap<String, String>();
         header.put("alg", JWE_ALG);
         header.put("enc", JWE_ENC);
@@ -118,6 +122,10 @@ final class JoseSupport {
     }
 
     static String decryptCompactJwe(String compactJwe, PrivateKey privateKey) throws Exception {
+        return decryptCompactJwe(compactJwe, privateKey, false);
+    }
+
+    static String decryptCompactJwe(String compactJwe, PrivateKey privateKey, boolean ignoreExpiry) throws Exception {
         String[] parts = splitToken(compactJwe, 5);
         Map<String, String> header = parseJsonObject(base64UrlDecodeToString(parts[0]));
         if (!JWE_ALG.equals(header.get("alg"))) {
@@ -126,7 +134,9 @@ final class JoseSupport {
         if (!JWE_ENC.equals(header.get("enc"))) {
             throw new IllegalArgumentException("Unsupported JWE encryption method: " + header.get("enc"));
         }
-        validateExpiry(header.get("exp"));
+        if (!ignoreExpiry) {
+            validateTimestamps(header.get("iat"), header.get("exp"));
+        }
 
         byte[] contentKey = decryptContentKey(base64UrlDecode(parts[1]), privateKey);
         byte[] iv = base64UrlDecode(parts[2]);
@@ -202,7 +212,14 @@ final class JoseSupport {
         return signature.verify(signatureBytes);
     }
 
-    private static void validateExpiry(String expiresAt) {
+    private static void validateTimestamps(String issuedAt, String expiresAt) {
+        if (issuedAt != null && issuedAt.length() > 0) {
+            Instant issueTime = Instant.parse(issuedAt);
+            if (issueTime.isAfter(Instant.now())) {
+                throw new IllegalArgumentException("Token issued in the future at " + issuedAt);
+            }
+        }
+
         if (expiresAt == null || expiresAt.length() == 0) {
             return;
         }

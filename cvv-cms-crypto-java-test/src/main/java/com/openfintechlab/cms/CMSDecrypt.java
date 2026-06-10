@@ -40,15 +40,24 @@ public final class CMSDecrypt {
 
     public static String decryptFromNestedJose(String token, String decryptionPrivateKeyPem, String verificationPublicKeyPem)
             throws Exception {
+        return decryptFromNestedJose(token, decryptionPrivateKeyPem, verificationPublicKeyPem, false);
+    }
+
+    public static String decryptFromNestedJose(
+            String token,
+            String decryptionPrivateKeyPem,
+            String verificationPublicKeyPem,
+            boolean ignoreExpiry)
+            throws Exception {
         PrivateKey decryptionPrivateKey = PemKeys.parsePrivateKey(decryptionPrivateKeyPem);
         PublicKey verificationPublicKey = PemKeys.parsePublicKey(verificationPublicKeyPem);
 
         if (JoseSupport.isCompactJws(token)) {
             String innerJwe = JoseSupport.extractVerifiedJwe(token, verificationPublicKey);
-            return JoseSupport.decryptCompactJwe(innerJwe, decryptionPrivateKey);
+            return JoseSupport.decryptCompactJwe(innerJwe, decryptionPrivateKey, ignoreExpiry);
         }
         if (JoseSupport.isCompactJwe(token)) {
-            return JoseSupport.decryptCompactJwe(token, decryptionPrivateKey);
+            return JoseSupport.decryptCompactJwe(token, decryptionPrivateKey, ignoreExpiry);
         }
         return decryptFromCmsBase64(token, decryptionPrivateKeyPem);
     }
