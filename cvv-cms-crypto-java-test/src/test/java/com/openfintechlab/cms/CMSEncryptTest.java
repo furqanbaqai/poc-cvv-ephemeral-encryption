@@ -32,6 +32,26 @@ class CMSEncryptTest {
         assertEquals(plainText, decryptEnvelope(encryptedBase64, keyPair));
     }
 
+    @Test
+    void encryptToNestedJoseReturnsJwsContainingJwe() throws Exception {
+        KeyPair keyPair = generateRsaKeyPair();
+
+        String token = CMSEncrypt.encryptToNestedJose(
+                "test cvv text",
+                toPublicKeyPem(keyPair),
+                toPrivateKeyPem(keyPair));
+
+        String[] jwsParts = token.split("\\.", -1);
+        assertEquals(3, jwsParts.length);
+
+        String innerJwe = new String(Base64.getUrlDecoder().decode(jwsParts[1]), StandardCharsets.UTF_8);
+        assertEquals(5, innerJwe.split("\\.", -1).length);
+        assertEquals("test cvv text", CMSDecrypt.decryptFromNestedJose(
+                token,
+                toPrivateKeyPem(keyPair),
+                toPublicKeyPem(keyPair)));
+    }
+
     private static KeyPair generateRsaKeyPair() throws Exception {
         KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
         keyPairGenerator.initialize(2048);
@@ -44,6 +64,14 @@ class CMSEncryptTest {
         return "-----BEGIN PUBLIC KEY-----" + System.lineSeparator()
                 + publicKey + System.lineSeparator()
                 + "-----END PUBLIC KEY-----";
+    }
+
+    private static String toPrivateKeyPem(KeyPair keyPair) {
+        String privateKey = Base64.getMimeEncoder(64, System.lineSeparator().getBytes(StandardCharsets.US_ASCII))
+                .encodeToString(keyPair.getPrivate().getEncoded());
+        return "-----BEGIN PRIVATE KEY-----" + System.lineSeparator()
+                + privateKey + System.lineSeparator()
+                + "-----END PRIVATE KEY-----";
     }
 
     private static String decryptEnvelope(String encryptedBase64, KeyPair keyPair) throws Exception {

@@ -30,6 +30,24 @@ class MainTest {
     }
 
     @Test
+    void cmsEncryptPrintsNestedJoseWhenSigningKeyIsProvided() throws Exception {
+        KeyPair keyPair = generateRsaKeyPair();
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        ByteArrayOutputStream error = new ByteArrayOutputStream();
+
+        int exitCode = Main.run(new String[] {
+                "cms-encrypt",
+                "test cvv text",
+                toPublicKeyPem(keyPair),
+                toPrivateKeyPem(keyPair)},
+                new PrintStream(output), new PrintStream(error));
+
+        assertEquals(0, exitCode);
+        assertEquals("", error.toString());
+        assertEquals(3, output.toString().trim().split("\\.", -1).length);
+    }
+
+    @Test
     void cmsDecryptPrintsPlainText() throws Exception {
         KeyPair keyPair = generateRsaKeyPair();
         String plainText = "test cvv text";
@@ -38,6 +56,22 @@ class MainTest {
         ByteArrayOutputStream error = new ByteArrayOutputStream();
 
         int exitCode = Main.run(new String[] {"cms-decrypt", cipherText, toPrivateKeyPem(keyPair)},
+                new PrintStream(output), new PrintStream(error));
+
+        assertEquals(0, exitCode);
+        assertEquals("", error.toString());
+        assertEquals(plainText + System.lineSeparator(), output.toString());
+    }
+
+    @Test
+    void cmsDecryptPrintsPlainTextFromNestedJose() throws Exception {
+        KeyPair keyPair = generateRsaKeyPair();
+        String plainText = "test cvv text";
+        String cipherText = CMSEncrypt.encryptToNestedJose(plainText, toPublicKeyPem(keyPair), toPrivateKeyPem(keyPair));
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        ByteArrayOutputStream error = new ByteArrayOutputStream();
+
+        int exitCode = Main.run(new String[] {"cms-decrypt", cipherText, toPrivateKeyPem(keyPair), toPublicKeyPem(keyPair)},
                 new PrintStream(output), new PrintStream(error));
 
         assertEquals(0, exitCode);

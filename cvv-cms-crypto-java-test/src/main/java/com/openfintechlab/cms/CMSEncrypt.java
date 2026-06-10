@@ -3,11 +3,10 @@ package com.openfintechlab.cms;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.nio.charset.StandardCharsets;
-import java.security.KeyFactory;
+import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.security.spec.MGF1ParameterSpec;
-import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
 
 import javax.crypto.Cipher;
@@ -28,7 +27,7 @@ public final class CMSEncrypt {
     }
 
     public static String encryptToCmsBase64(String text, String publicKeyPem) throws Exception {
-        PublicKey publicKey = parsePublicKey(publicKeyPem);
+        PublicKey publicKey = PemKeys.parsePublicKey(publicKeyPem);
         SecretKey contentKey = generateContentKey();
         byte[] iv = generateIv();
         byte[] encryptedContentKey = encryptContentKey(contentKey, publicKey);
@@ -37,15 +36,16 @@ public final class CMSEncrypt {
         return Base64.getEncoder().encodeToString(encodeEnvelope(encryptedContentKey, iv, encryptedContent));
     }
 
-    private static PublicKey parsePublicKey(String publicKeyPem) throws Exception {
-        String keyBody = publicKeyPem
-                .replace("-----BEGIN PUBLIC KEY-----", "")
-                .replace("-----END PUBLIC KEY-----", "")
-                .replace("\\n", "")
-                .replaceAll("\\s", "");
+    public static String encryptToNestedJose(String text, String encryptionPublicKeyPem, String signingPrivateKeyPem)
+            throws Exception {
+        PublicKey encryptionPublicKey = PemKeys.parsePublicKey(encryptionPublicKeyPem);
+        PrivateKey signingPrivateKey = PemKeys.parsePrivateKey(signingPrivateKeyPem);
+        String compactJwe = JoseSupport.encryptToCompactJwe(text, encryptionPublicKey);
+        return JoseSupport.signCompactJwe(compactJwe, signingPrivateKey);
+    }
 
-        byte[] encodedKey = Base64.getDecoder().decode(keyBody);
-        return KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(encodedKey));
+    public static String encryptToCompactJwe(String text, String publicKeyPem) throws Exception {
+        return JoseSupport.encryptToCompactJwe(text, PemKeys.parsePublicKey(publicKeyPem));
     }
 
     private static SecretKey generateContentKey() throws Exception {

@@ -3,10 +3,9 @@ package com.openfintechlab.cms;
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.nio.charset.StandardCharsets;
-import java.security.KeyFactory;
 import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.security.spec.MGF1ParameterSpec;
-import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.Base64;
 
 import javax.crypto.Cipher;
@@ -24,7 +23,14 @@ public final class CMSDecrypt {
     }
 
     public static String decryptFromCmsBase64(String cipherText, String privateKeyPem) throws Exception {
-        PrivateKey privateKey = parsePrivateKey(privateKeyPem);
+        PrivateKey privateKey = PemKeys.parsePrivateKey(privateKeyPem);
+        if (JoseSupport.isCompactJwe(cipherText)) {
+            return JoseSupport.decryptCompactJwe(cipherText, privateKey);
+        }
+        if (JoseSupport.isCompactJws(cipherText)) {
+            throw new IllegalArgumentException("Nested JWS token requires a verification public key.");
+        }
+
         EncryptedEnvelope envelope = decodeEnvelope(Base64.getDecoder().decode(cipherText));
         byte[] contentKey = decryptContentKey(envelope.encryptedContentKey, privateKey);
         byte[] plainText = decryptContent(envelope.encryptedContent, contentKey, envelope.iv);
@@ -32,15 +38,19 @@ public final class CMSDecrypt {
         return new String(plainText, StandardCharsets.UTF_8);
     }
 
-    private static PrivateKey parsePrivateKey(String privateKeyPem) throws Exception {
-        String keyBody = privateKeyPem
-                .replace("-----BEGIN PRIVATE KEY-----", "")
-                .replace("-----END PRIVATE KEY-----", "")
-                .replace("\\n", "")
-                .replaceAll("\\s", "");
+    public static String decryptFromNestedJose(String token, String decryptionPrivateKeyPem, String verificationPublicKeyPem)
+            throws Exception {
+        PrivateKey decryptionPrivateKey = PemKeys.parsePrivateKey(decryptionPrivateKeyPem);
+        PublicKey verificationPublicKey = PemKeys.parsePublicKey(verificationPublicKeyPem);
 
-        byte[] encodedKey = Base64.getDecoder().decode(keyBody);
-        return KeyFactory.getInstance("RSA").generatePrivate(new PKCS8EncodedKeySpec(encodedKey));
+        if (JoseSupport.isCompactJws(token)) {
+            String innerJwe = JoseSupport.extractVerifiedJwe(token, verificationPublicKey);
+            return JoseSupport.decryptCompactJwe(innerJwe, decryptionPrivateKey);
+        }
+        if (JoseSupport.isCompactJwe(token)) {
+            return JoseSupport.decryptCompactJwe(token, decryptionPrivateKey);
+        }
+        return decryptFromCmsBase64(token, decryptionPrivateKeyPem);
     }
 
     private static EncryptedEnvelope decodeEnvelope(byte[] encodedEnvelope) throws Exception {

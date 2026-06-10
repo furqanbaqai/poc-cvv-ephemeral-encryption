@@ -6,6 +6,7 @@ The console entry point is `com.sib.cvv.cms.Main`. Business logic is under `com.
 
 - `CMSEncrypt`: encrypts plaintext with a PEM public key.
 - `CMSDecrypt`: decrypts ciphertext with a PEM private key.
+- Nested JOSE mode: encrypts plaintext as compact JWE, then signs that JWE as compact JWS.
 
 ## Algorithms
 
@@ -20,7 +21,13 @@ Encryption uses a native Java hybrid envelope:
 - Private key format: PKCS#8 PEM, `-----BEGIN PRIVATE KEY-----`
 - Command output: Base64-encoded binary envelope
 
-The envelope is project-specific and starts with an `OFTLCMS` marker. It is not a standards-compliant CMS/PKCS#7 EnvelopedData payload.
+The legacy envelope is project-specific and starts with an `OFTLCMS` marker. It is not a standards-compliant CMS/PKCS#7 EnvelopedData payload.
+
+Nested JOSE mode uses:
+
+- Inner JWE: `alg=RSA-OAEP-256`, `enc=A256GCM`, `typ=JOSE`, with ISO-8601 `iat` and `exp` protected-header values.
+- Outer JWS: `alg=PS256`, `typ=JOSE`, `cty=JWE`, `kid=keyid`.
+- Output: compact JWS whose payload is the compact JWE.
 
 ## Requirements
 
@@ -52,6 +59,13 @@ mvn test
 ```powershell
 java -jar .\target\cvv-cms-crypto-java-test-1.0.0-SNAPSHOT.jar cms-encrypt <TEXT> <PUBLIC_KEY_PEM>
 java -jar .\target\cvv-cms-crypto-java-test-1.0.0-SNAPSHOT.jar cms-decrypt <CIPHER_TEXT> <PRIVATE_KEY_PEM>
+```
+
+Nested JOSE commands add the key needed for the outer JWS signature or verification. PEM formats stay the same:
+
+```powershell
+java -jar .\target\cvv-cms-crypto-java-test-1.0.0-SNAPSHOT.jar cms-encrypt <TEXT> <ENCRYPTION_PUBLIC_KEY_PEM> <SIGNING_PRIVATE_KEY_PEM>
+java -jar .\target\cvv-cms-crypto-java-test-1.0.0-SNAPSHOT.jar cms-decrypt <CIPHER_TEXT> <DECRYPTION_PRIVATE_KEY_PEM> <VERIFICATION_PUBLIC_KEY_PEM>
 ```
 
 ## Encrypt
