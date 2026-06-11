@@ -13,6 +13,7 @@ import com.sib.cvv.Main;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.security.KeyFactory;
 import java.security.PrivateKey;
 import java.security.spec.MGF1ParameterSpec;
@@ -65,7 +66,7 @@ class JWEEncryptTest {
         assertEquals(5, jwe.split("\\.").length);
         assertFalse(jwe.contains(System.lineSeparator() + System.lineSeparator()));
         assertExpectedHeader(decryptedJwe.getHeader());
-        assertExpectedPayload(decryptedJwe.getPayload(), "card_12345");
+        assertExpectedDynamicPayload(decryptedJwe.getPayload(), "card_12345");
     }
 
     @Test
@@ -85,7 +86,7 @@ class JWEEncryptTest {
         assertEquals("", result.getStderr());
         assertEquals(5, jwe.split("\\.").length);
         assertExpectedHeader(decryptedJwe.getHeader());
-        assertExpectedPayload(decryptedJwe.getPayload(), "4012 8888 8888 1881");
+        assertExpectedDynamicPayload(decryptedJwe.getPayload(), "4012 8888 8888 1881");
     }
 
     private static void assertExpectedHeader(JsonNode header) {
@@ -98,13 +99,27 @@ class JWEEncryptTest {
     }
 
     private static void assertExpectedPayload(JsonNode payload, String expectedCardRef) {
+        assertExpectedPayloadBasics(payload, expectedCardRef);
+        assertEquals(1775901000L, payload.get("iat").asLong());
+        assertEquals(1775901030L, payload.get("exp").asLong());
+    }
+
+    private static void assertExpectedDynamicPayload(JsonNode payload, String expectedCardRef) {
+        assertExpectedPayloadBasics(payload, expectedCardRef);
+        long issuedAt = payload.get("iat").asLong();
+        long expiresAt = payload.get("exp").asLong();
+
+        assertTrue(issuedAt >= 1775901000L);
+        assertTrue(issuedAt <= Instant.now().getEpochSecond());
+        assertEquals(issuedAt + 300L, expiresAt);
+    }
+
+    private static void assertExpectedPayloadBasics(JsonNode payload, String expectedCardRef) {
         assertEquals(expectedCardRef, payload.get("cardRef").asText());
         assertEquals(expectedCardRef, payload.get("pan").asText());
         assertEquals("12", payload.get("expiryMonth").asText());
         assertEquals("29", payload.get("expiryYear").asText());
         assertEquals("123", payload.get("cvv").asText());
-        assertEquals(1775901000L, payload.get("iat").asLong());
-        assertEquals(1775901030L, payload.get("exp").asLong());
         assertEquals("reveal-8f3a1c", payload.get("jti").asText());
     }
 

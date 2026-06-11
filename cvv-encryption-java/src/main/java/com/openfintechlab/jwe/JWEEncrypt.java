@@ -11,6 +11,7 @@ import java.security.interfaces.RSAPublicKey;
 import java.security.spec.MGF1ParameterSpec;
 import java.security.spec.RSAPublicKeySpec;
 import java.util.Arrays;
+import java.time.Instant;
 import javax.crypto.Cipher;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.OAEPParameterSpec;
@@ -102,8 +103,10 @@ public class JWEEncrypt {
         this.expiryMonth = requireText(expiryMonth, "expiryMonth");
         this.expiryYear = requireText(expiryYear, "expiryYear");
         this.cvv = requireText(cvv, "cvv");
-        this.issuedAt = issuedAt;
-        this.expiresAt = expiresAt;
+
+        long currentEpoch = Instant.now().getEpochSecond();
+        this.issuedAt = (issuedAt == 0 || issuedAt < 0) ? currentEpoch : issuedAt;
+        this.expiresAt = (expiresAt == 0 || expiresAt < 0) ? this.issuedAt + 300 : expiresAt;
         this.jwtId = requireText(jwtId, "jti");
         this.keyType = requireText(keyType, "kty");
         this.keyUse = requireText(keyUse, "use");
