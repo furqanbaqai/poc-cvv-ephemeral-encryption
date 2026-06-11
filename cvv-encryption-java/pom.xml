@@ -6,7 +6,7 @@
 
   <groupId>com.sib</groupId>
   <artifactId>cvv-encryption-util</artifactId>
-  <version>1.0.0-beta01</version>
+  <version>1.0.0-beta.01</version>
   <name>cvv-encryption-java</name>
   <description>A Java utility for CVV encryption using ephemeral keys.</description>
   <url>https://github.com/furqanbaqai/poc-cvv-ephemeral-encryption</url>
