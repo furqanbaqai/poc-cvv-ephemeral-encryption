@@ -44,7 +44,7 @@ Generates an ephemeral RSA key pair and constructs a JWE reveal request payload.
 ### Usage
 
 ```bash
-java -jar target/cvv-encryption-java.jar reveal [debug]
+java -jar target/cvv-encryption-java-1.0.0-beta.01.jar reveal [debug]
 ```
 
 ### Standard Mode
@@ -52,7 +52,7 @@ java -jar target/cvv-encryption-java.jar reveal [debug]
 Outputs minified JSON with the public key only:
 
 ```bash
-$ java -jar target/cvv-encryption-java.jar reveal
+$ java -jar target/cvv-encryption-java-1.0.0-beta.01.jar reveal
 {"requestId":"e858936675514b84957b53ba7ba4771f","cardRef":"4012 8888 8888 1881","channel":"mobile","ephemeralPublicKey":{"kty":"RSA","use":"enc","alg":"RSA-OAEP-256","n":"...","e":"AQAB"}}
 ```
 
@@ -61,7 +61,7 @@ $ java -jar target/cvv-encryption-java.jar reveal
 Outputs minified JSON with both public and private keys:
 
 ```bash
-$ java -jar target/cvv-encryption-java.jar reveal debug
+$ java -jar target/cvv-encryption-java-1.0.0-beta.01.jar reveal debug
 {"requestId":"e858936675514b84957b53ba7ba4771f","cardRef":"4012 8888 8888 1881","channel":"mobile","ephemeralPublicKey":{"kty":"RSA","use":"enc","alg":"RSA-OAEP-256","n":"...","e":"AQAB","privateKey":"-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"}}
 ```
 
@@ -74,7 +74,7 @@ Encrypts the card payload using the RSA public key from a reveal request JSON an
 ### Usage
 
 ```bash
-java -jar target/cvv-encryption-java.jar jwe-encrypt '<JSON-PAYLOAD>'
+java -jar target/cvv-encryption-java-1.0.0-beta.01.jar jwe-encrypt '<JSON-PAYLOAD>'
 ```
 
 The JSON payload must contain `cardRef` and `ephemeralPublicKey` with public JWK fields:
@@ -102,20 +102,20 @@ Decrypts a compact JWE token using the RSA private key emitted by `reveal debug`
 ### Usage
 
 ```bash
-java -jar target/cvv-encryption-java.jar jwe-decrypt '<JWE-MESSAGE>' '<PRIVATE-KEY>'
+java -jar target/cvv-encryption-java-1.0.0-beta.01.jar jwe-decrypt '<JWE-MESSAGE>' '<PRIVATE-KEY>'
 ```
 
 The private key can be passed as raw PEM text with escaped newlines:
 
 ```bash
-$ java -jar target/cvv-encryption-java.jar jwe-decrypt 'eyJhbGciOi...' '-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----'
+$ java -jar target/cvv-encryption-java-1.0.0-beta.01.jar jwe-decrypt 'eyJhbGciOi...' '-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----'
 {"cardRef":"4012 8888 8888 1881","pan":"4012 8888 8888 1881","expiryMonth":"12","expiryYear":"29","cvv":"123","iat":1775901000,"exp":1775901030,"jti":"reveal-8f3a1c"}
 ```
 
 It can also be passed as JSON when that is easier for shell scripting:
 
 ```bash
-java -jar target/cvv-encryption-java.jar jwe-decrypt 'eyJhbGciOi...' '{"privateKey":"-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"}'
+java -jar target/cvv-encryption-java-1.0.0-beta.01.jar jwe-decrypt 'eyJhbGciOi...' '{"privateKey":"-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"}'
 ```
 
 ## Output Fields
@@ -149,7 +149,7 @@ mvn package
 The runnable artifact is:
 
 ```text
-target/cvv-encryption-java.jar
+target/cvv-encryption-java-1.0.0-beta.01.jar
 ```
 
 The packaged JAR is compiled for Java 8 bytecode compatibility (`major version 52`) so it can be imported by Java 8 runtimes and newer.

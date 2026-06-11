@@ -87,7 +87,7 @@ public class Main {
     }
 
     private static void printUsage() {
-        System.err.println("Usage: java -jar cvv-encryption-java.jar <COMMAND> [OPTIONS]");
+        System.err.println("Usage: java -jar cvv-encryption-java-1.0.0-beta.01.jar <COMMAND> [OPTIONS]");
         System.err.println();
         System.err.println("Commands:");
         System.err.println("  reveal [debug]    Generate ephemeral RSA key pair and output request JSON");
@@ -98,10 +98,10 @@ public class Main {
         System.err.println("                    Decrypt JWE card data using the reveal request private key");
         System.err.println();
         System.err.println("Examples:");
-        System.err.println("  java -jar cvv-encryption-java.jar reveal");
-        System.err.println("  java -jar cvv-encryption-java.jar reveal debug");
-        System.err.println("  java -jar cvv-encryption-java.jar jwe-encrypt '{\"requestId\":\"...\",\"cardRef\":\"...\",\"channel\":\"mobile\",\"ephemeralPublicKey\":{\"kty\":\"RSA\",\"use\":\"enc\",\"alg\":\"RSA-OAEP-256\",\"n\":\"...\",\"e\":\"AQAB\"}}'");
-        System.err.println("  java -jar cvv-encryption-java.jar jwe-decrypt 'eyJhbGciOi...' '-----BEGIN PRIVATE KEY-----\\n...\\n-----END PRIVATE KEY-----'");
+        System.err.println("  java -jar cvv-encryption-java-1.0.0-beta.01.jar reveal");
+        System.err.println("  java -jar cvv-encryption-java-1.0.0-beta.01.jar reveal debug");
+        System.err.println("  java -jar cvv-encryption-java-1.0.0-beta.01.jar jwe-encrypt '{\"requestId\":\"...\",\"cardRef\":\"...\",\"channel\":\"mobile\",\"ephemeralPublicKey\":{\"kty\":\"RSA\",\"use\":\"enc\",\"alg\":\"RSA-OAEP-256\",\"n\":\"...\",\"e\":\"AQAB\"}}'");
+        System.err.println("  java -jar cvv-encryption-java-1.0.0-beta.01.jar jwe-decrypt 'eyJhbGciOi...' '-----BEGIN PRIVATE KEY-----\\n...\\n-----END PRIVATE KEY-----'");
     }
 
     private static RevealInput parseRevealInput(String jsonPayload) {
