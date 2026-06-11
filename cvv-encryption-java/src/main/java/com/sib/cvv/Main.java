@@ -7,6 +7,7 @@ import com.openfintechlab.jwe.model.RevealRequest;
 import com.openfintechlab.jwe.util.JsonUtil;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.time.Instant;
 
 public class Main {
     private static final String COMMAND_REVEAL = "reveal";
@@ -15,9 +16,9 @@ public class Main {
     private static final String OPTION_DEBUG = "debug";
     private static final String EXPIRY_MONTH = "12";
     private static final String EXPIRY_YEAR = "29";
-    private static final String CVV = "123";
-    private static final long PAYLOAD_IAT = 1775901000L;
-    private static final long PAYLOAD_EXP = 1775901030L;
+    private static final String CVV = "123";    
+    private static final long PAYLOAD_IAT = Instant.now().getEpochSecond();    
+    private static final long PAYLOAD_EXP = PAYLOAD_IAT + 300L;
     private static final String PAYLOAD_JTI = "reveal-8f3a1c";
 
     public static void main(String[] args) {
